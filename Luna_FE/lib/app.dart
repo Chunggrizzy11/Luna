@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+import 'core/config/app_config.dart';
+import 'core/config/app_constant.dart';
+import 'core/router/app_router.dart';
+import 'core/theme/app_theme.dart';
+
 class LunaApp extends StatelessWidget {
-  const LunaApp({super.key});
+  LunaApp({required this.config, super.key})
+    : _router = AppRouter(config: config);
+
+  final AppConfig config;
+  final AppRouter _router;
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
-        title: 'Luna',
-        locale: const Locale('vi'),
-        supportedLocales: const [Locale('vi')],
-        localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: const Scaffold(body: Center(child: Text('Luna'))),
-      );
+  Widget build(BuildContext context) => MaterialApp.router(
+    title: AppConstant.appName,
+    locale: const Locale(AppConstant.defaultLocale),
+    supportedLocales: const [Locale('vi')],
+    localizationsDelegates: GlobalMaterialLocalizations.delegates,
+    theme: AppTheme.light,
+    darkTheme: AppTheme.dark,
+    routerConfig: _router.router,
+  );
 }
