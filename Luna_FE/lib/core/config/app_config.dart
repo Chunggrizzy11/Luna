@@ -1,5 +1,3 @@
-import 'package:flutter/widgets.dart';
-
 import '../../features/onboarding/domain/register_device.dart';
 import '../../features/onboarding/presentation/onboarding_controller.dart';
 import '../../shared/entities/device_identity.dart';
@@ -15,7 +13,6 @@ class AppConfig {
     required this.registerDevice,
     required this.onboardingController,
     required this.initialIdentity,
-    required this.homeBuilder,
   });
 
   final SecureStorageService secureStorage;
@@ -24,5 +21,4 @@ class AppConfig {
   final RegisterDevice registerDevice;
   final OnboardingController onboardingController;
   final DeviceIdentity? initialIdentity;
-  final WidgetBuilder homeBuilder;
 }

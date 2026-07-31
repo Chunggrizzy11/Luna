@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 
+import '../../features/onboarding/presentation/onboarding_complete_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
 import '../../shared/entities/device_identity.dart';
@@ -34,7 +35,8 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.home,
-            builder: (context, state) => config.homeBuilder(context),
+            builder: (context, state) =>
+                OnboardingCompletePage(secureStorage: config.secureStorage),
           ),
         ],
       );

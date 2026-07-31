@@ -1,5 +1,3 @@
-import 'package:flutter/widgets.dart';
-
 import '../../features/onboarding/data/device_repository.dart';
 import '../../features/onboarding/domain/register_device.dart';
 import '../../features/onboarding/presentation/onboarding_controller.dart';
@@ -17,7 +15,6 @@ abstract final class AppInitializer {
   static Future<AppConfig> initialize({
     SecureStorageService? secureStorage,
     String? apiBaseUrl,
-    required WidgetBuilder homeBuilder,
   }) async {
     final storage = secureStorage ?? SecureStorageService();
     DeviceIdentity? identity;
@@ -45,7 +42,6 @@ abstract final class AppInitializer {
       registerDevice: registerDevice,
       onboardingController: controller,
       initialIdentity: identity,
-      homeBuilder: homeBuilder,
     );
   }
 }

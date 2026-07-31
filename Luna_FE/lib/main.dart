@@ -6,8 +6,6 @@ import 'core/config/app_initializer.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final config = await AppInitializer.initialize(
-    homeBuilder: (_) => const Center(child: Text('Luna')),
-  );
+  final config = await AppInitializer.initialize();
   runApp(ProviderScope(child: LunaApp(config: config)));
 }

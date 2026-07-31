@@ -25,7 +25,6 @@ void main() {
 
 Future<AppConfig> _config() => AppInitializer.initialize(
   secureStorage: SecureStorageService(backend: _MemorySecureStorage()),
-  homeBuilder: (_) => const Center(child: Text('Luna')),
 );
 
 class _MemorySecureStorage implements SecureStorageBackend {
