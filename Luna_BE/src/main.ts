@@ -1,8 +1,56 @@
+import { ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import compression from 'compression';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+import { HttpExceptionFilter } from './common/filters/http-exception.filter';
+import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  const configService = app.get(ConfigService);
+  const corsOrigins = configService.getOrThrow<string[]>('app.corsOrigins');
+
+  app.setGlobalPrefix('api/v1');
+  app.use(helmet());
+  app.use(compression());
+  app.enableCors({
+    credentials: true,
+    origin: (
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin || corsOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('Origin is not allowed by CORS'));
+    },
+  });
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+  app.useGlobalInterceptors(new ApiResponseInterceptor());
+  app.useGlobalFilters(new HttpExceptionFilter());
+
+  const swaggerDocument = SwaggerModule.createDocument(
+    app,
+    new DocumentBuilder()
+      .setTitle('Luna API')
+      .setDescription('Luna REST API documentation')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .build(),
+  );
+  SwaggerModule.setup('docs', app, swaggerDocument);
+
+  await app.listen(configService.getOrThrow<number>('app.PORT'));
 }
 bootstrap();
