@@ -74,7 +74,7 @@ describe('Device authentication (e2e)', () => {
   it('allows public registration, authenticates the current device, and rejects it after revocation', async () => {
     const registration = await request(app.getHttpServer())
       .post('/devices/register')
-      .send({ platform: 'ios', deviceName: 'Test iPhone' })
+      .send({ role: 'owner', platform: 'ios', deviceName: 'Test iPhone' })
       .expect(201);
 
     const registrationBody = registration.body as unknown as {
@@ -112,7 +112,7 @@ describe('Device authentication (e2e)', () => {
   it('rejects a null platform and persists a valid authenticated platform update', async () => {
     const registration = await request(app.getHttpServer())
       .post('/devices/register')
-      .send({ platform: 'ios' })
+      .send({ role: 'owner', platform: 'ios' })
       .expect(201);
     const registrationBody = registration.body as unknown as { token: string };
 
@@ -129,5 +129,45 @@ describe('Device authentication (e2e)', () => {
       .expect(200);
 
     expect(devices[0]).toMatchObject({ platform: 'android' });
+  });
+
+  it('requires a valid role and preserves owner and partner registrations', async () => {
+    await request(app.getHttpServer())
+      .post('/devices/register')
+      .send({ platform: 'ios' })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/devices/register')
+      .send({ role: 'invalid', platform: 'ios' })
+      .expect(400);
+
+    const ownerRegistration = await request(app.getHttpServer())
+      .post('/devices/register')
+      .send({ role: 'owner', platform: 'ios' })
+      .expect(201);
+    const partnerRegistration = await request(app.getHttpServer())
+      .post('/devices/register')
+      .send({ role: 'partner', platform: 'android' })
+      .expect(201);
+
+    const ownerToken = (ownerRegistration.body as { token: string }).token;
+    const partnerToken = (partnerRegistration.body as { token: string }).token;
+    expect(devices).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ role: 'owner', platform: 'ios' }),
+        expect.objectContaining({ role: 'partner', platform: 'android' }),
+      ]),
+    );
+
+    await request(app.getHttpServer())
+      .get('/devices/me')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200)
+      .expect({ deviceId: 'device-1', role: 'owner', status: 'active' });
+    await request(app.getHttpServer())
+      .get('/devices/me')
+      .set('Authorization', `Bearer ${partnerToken}`)
+      .expect(200)
+      .expect({ deviceId: 'device-2', role: 'partner', status: 'active' });
   });
 });

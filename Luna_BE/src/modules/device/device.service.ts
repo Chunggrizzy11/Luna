@@ -6,7 +6,7 @@ import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-
 import { RegisterDeviceDto } from './dto/register-device.dto';
 import { PushTokenDto } from './dto/push-token.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
-import { Device, DeviceRole, DeviceStatus } from './schemas/device.schema';
+import { Device, DeviceStatus } from './schemas/device.schema';
 
 export const DEVICE_TOKEN_PEPPER = 'DEVICE_TOKEN_PEPPER';
 
@@ -24,7 +24,6 @@ export class DeviceService {
     const device = await this.deviceModel.create({
       ...dto,
       tokenHash: this.hashToken(token),
-      role: DeviceRole.OWNER,
       status: DeviceStatus.ACTIVE,
     });
 

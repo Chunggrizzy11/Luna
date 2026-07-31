@@ -47,6 +47,7 @@ describe('DeviceService', () => {
 
   it('registers a device with a one-time 64-character hex token and hashes it at rest', async () => {
     const result = await service.register({
+      role: DeviceRole.OWNER,
       platform: 'ios',
       deviceName: 'Test iPhone',
     });
@@ -67,7 +68,10 @@ describe('DeviceService', () => {
   });
 
   it('authenticates an active device from its token', async () => {
-    const registration = await service.register({ platform: 'android' });
+    const registration = await service.register({
+      role: DeviceRole.OWNER,
+      platform: 'android',
+    });
 
     await expect(service.authenticate(registration.token)).resolves.toEqual({
       deviceId: 'device-1',
@@ -77,7 +81,10 @@ describe('DeviceService', () => {
   });
 
   it('rejects a revoked device token', async () => {
-    const registration = await service.register({ platform: 'web' });
+    const registration = await service.register({
+      role: DeviceRole.OWNER,
+      platform: 'web',
+    });
     await service.revoke(registration.deviceId);
 
     await expect(
@@ -93,5 +100,19 @@ describe('DeviceService', () => {
       { platform: 'android' },
       { runValidators: true },
     );
+  });
+
+  it('persists and authenticates a partner registration with the partner role', async () => {
+    const registration = await service.register({
+      role: DeviceRole.PARTNER,
+      platform: 'android',
+    });
+
+    expect(devices[0]).toMatchObject({ role: DeviceRole.PARTNER });
+    await expect(service.authenticate(registration.token)).resolves.toEqual({
+      deviceId: 'device-1',
+      role: DeviceRole.PARTNER,
+      status: DeviceStatus.ACTIVE,
+    });
   });
 });
