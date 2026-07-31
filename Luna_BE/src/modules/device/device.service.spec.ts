@@ -84,4 +84,14 @@ describe('DeviceService', () => {
       service.authenticate(registration.token),
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
+
+  it('runs schema validators when updating a device', async () => {
+    await service.update('device-1', { platform: 'android' });
+
+    expect(deviceModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      'device-1',
+      { platform: 'android' },
+      { runValidators: true },
+    );
+  });
 });

@@ -1,8 +1,15 @@
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  Matches,
+  MaxLength,
+  ValidateIf,
+} from 'class-validator';
 
 export class UpdateDeviceDto {
-  @IsOptional()
+  @ValidateIf((_object, value: unknown) => value !== undefined)
   @IsString()
+  @Matches(/\S/)
   @MaxLength(32)
   platform?: string;
 

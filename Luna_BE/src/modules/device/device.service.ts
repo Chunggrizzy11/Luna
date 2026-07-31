@@ -51,7 +51,9 @@ export class DeviceService {
   }
 
   async update(deviceId: string, dto: UpdateDeviceDto): Promise<void> {
-    await this.deviceModel.findByIdAndUpdate(deviceId, dto).exec();
+    await this.deviceModel
+      .findByIdAndUpdate(deviceId, dto, { runValidators: true })
+      .exec();
   }
 
   async updatePushToken(deviceId: string, dto: PushTokenDto): Promise<void> {

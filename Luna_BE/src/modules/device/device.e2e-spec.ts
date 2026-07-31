@@ -108,4 +108,26 @@ describe('Device authentication (e2e)', () => {
     await request(app.getHttpServer()).patch('/devices/me').expect(401);
     await request(app.getHttpServer()).post('/devices/push-token').expect(401);
   });
+
+  it('rejects a null platform and persists a valid authenticated platform update', async () => {
+    const registration = await request(app.getHttpServer())
+      .post('/devices/register')
+      .send({ platform: 'ios' })
+      .expect(201);
+    const registrationBody = registration.body as unknown as { token: string };
+
+    await request(app.getHttpServer())
+      .patch('/devices/me')
+      .set('Authorization', `Bearer ${registrationBody.token}`)
+      .send({ platform: null })
+      .expect(400);
+
+    await request(app.getHttpServer())
+      .patch('/devices/me')
+      .set('Authorization', `Bearer ${registrationBody.token}`)
+      .send({ platform: 'android' })
+      .expect(200);
+
+    expect(devices[0]).toMatchObject({ platform: 'android' });
+  });
 });
