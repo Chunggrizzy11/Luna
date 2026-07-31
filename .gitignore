@@ -1,0 +1,22 @@
+.worktrees/
+.superpowers/
+
+# Flutter
+Luna_FE/.dart_tool/
+Luna_FE/.flutter-plugins*
+Luna_FE/build/
+
+# Node / NestJS
+Luna_BE/node_modules/
+Luna_BE/dist/
+Luna_BE/coverage/
+
+# Environment and secrets
+.env
+*.local.env
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
