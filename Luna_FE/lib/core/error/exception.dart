@@ -1,8 +1,16 @@
+enum StorageFailureReason {
+  readFailed,
+  writeFailed,
+  deleteFailed,
+  corruptIdentity,
+  cleanupFailed,
+}
+
 class StorageException implements Exception {
-  const StorageException(this.message, [this.cause]);
+  const StorageException(this.message, {required this.reason});
 
   final String message;
-  final Object? cause;
+  final StorageFailureReason reason;
 
   @override
   String toString() => message;

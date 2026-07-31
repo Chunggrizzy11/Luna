@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:luna_fe/core/config/app_identity_state.dart';
 import 'package:luna_fe/core/storage/secure_storage_service.dart';
 import 'package:luna_fe/features/onboarding/presentation/onboarding_complete_page.dart';
 import 'package:luna_fe/shared/entities/device_identity.dart';
@@ -17,9 +18,10 @@ void main() {
         role: DeviceRole.owner,
       ),
     );
+    final identityState = await AppIdentityState.initialize(storage);
 
     await tester.pumpWidget(
-      MaterialApp(home: OnboardingCompletePage(secureStorage: storage)),
+      MaterialApp(home: OnboardingCompletePage(identityState: identityState)),
     );
     await tester.pumpAndSettle();
 

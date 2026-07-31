@@ -2,25 +2,21 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/onboarding/presentation/onboarding_complete_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
+import '../../features/splash/presentation/bootstrap_error_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
-import '../../shared/entities/device_identity.dart';
 import '../config/app_config.dart';
-import '../error/exception.dart';
+import '../config/app_identity_state.dart';
 import 'app_routes.dart';
 
 class AppRouter {
   AppRouter({required AppConfig config})
     : router = GoRouter(
         initialLocation: AppRoutes.splash,
-        redirect: (context, state) async {
-          DeviceIdentity? identity;
-          try {
-            identity = await config.secureStorage.readIdentity();
-          } on StorageException {
-            identity = null;
-          }
-          return redirectPath(identity: identity, location: state.uri.path);
-        },
+        refreshListenable: config.identityState,
+        redirect: (context, state) => redirectPath(
+          status: config.identityState.status,
+          location: state.uri.path,
+        ),
         routes: [
           GoRoute(
             path: AppRoutes.splash,
@@ -30,13 +26,21 @@ class AppRouter {
             path: AppRoutes.onboarding,
             builder: (context, state) => OnboardingPage(
               controller: config.onboardingController,
-              onReady: (_) => context.go(AppRoutes.home),
+              onReady: (identity) {
+                config.identityState.setPresent(identity);
+                context.go(AppRoutes.home);
+              },
             ),
+          ),
+          GoRoute(
+            path: AppRoutes.bootstrapError,
+            builder: (context, state) =>
+                BootstrapErrorPage(identityState: config.identityState),
           ),
           GoRoute(
             path: AppRoutes.home,
             builder: (context, state) =>
-                OnboardingCompletePage(secureStorage: config.secureStorage),
+                OnboardingCompletePage(identityState: config.identityState),
           ),
         ],
       );
@@ -44,14 +48,22 @@ class AppRouter {
   final GoRouter router;
 
   static String? redirectPath({
-    required DeviceIdentity? identity,
+    required AppIdentityStatus status,
     required String location,
   }) {
-    if (identity == null) {
+    if (status == AppIdentityStatus.error) {
+      return location == AppRoutes.bootstrapError
+          ? null
+          : AppRoutes.bootstrapError;
+    }
+    if (status == AppIdentityStatus.missing) {
       return location == AppRoutes.onboarding ? null : AppRoutes.onboarding;
     }
-    if (location == AppRoutes.onboarding) return AppRoutes.home;
-    if (location == AppRoutes.splash) return AppRoutes.home;
+    if (location == AppRoutes.onboarding ||
+        location == AppRoutes.splash ||
+        location == AppRoutes.bootstrapError) {
+      return AppRoutes.home;
+    }
     return null;
   }
 }

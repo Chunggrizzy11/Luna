@@ -1,33 +1,30 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/storage/secure_storage_service.dart';
+import '../../../core/config/app_identity_state.dart';
 import '../../../core/theme/app_color.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_error.dart';
-import '../../../core/widgets/app_loading.dart';
-import '../../../shared/entities/device_identity.dart';
 import '../../../shared/enums/device_role.dart';
 
 class OnboardingCompletePage extends StatelessWidget {
-  const OnboardingCompletePage({required this.secureStorage, super.key});
+  const OnboardingCompletePage({required this.identityState, super.key});
 
-  final SecureStorageService secureStorage;
+  final AppIdentityState identityState;
 
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(title: const Text('Luna')),
-    body: FutureBuilder<DeviceIdentity?>(
-      future: secureStorage.readIdentity(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState != ConnectionState.done) {
-          return const AppLoading(label: 'Đang xác minh thiết bị');
-        }
-        if (snapshot.hasError || snapshot.data == null) {
+    body: AnimatedBuilder(
+      animation: identityState,
+      builder: (context, _) {
+        final identity = identityState.identity;
+        if (identity == null ||
+            identityState.status != AppIdentityStatus.present) {
           return const AppError(
             message: 'Không thể xác minh danh tính thiết bị.',
           );
         }
-        final roleLabel = switch (snapshot.data!.role) {
+        final roleLabel = switch (identity.role) {
           DeviceRole.owner => 'Theo dõi chu kỳ',
           DeviceRole.partner => 'Đồng hành',
         };

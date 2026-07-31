@@ -7,7 +7,7 @@ import 'package:luna_fe/core/network/api_response.dart';
 import 'package:luna_fe/core/storage/cache_manager.dart';
 import 'package:luna_fe/core/storage/local_database.dart';
 import 'package:luna_fe/core/storage/shared_preference_service.dart';
-import 'package:luna_fe/core/theme/app_color.dart';
+import 'package:luna_fe/core/theme/app_semantic_colors.dart';
 import 'package:luna_fe/core/theme/dark_theme.dart';
 import 'package:luna_fe/core/theme/light_theme.dart';
 import 'package:luna_fe/core/utils/date_util.dart';
@@ -86,8 +86,36 @@ void main() {
   test('light and dark themes retain Luna semantic colors', () {
     expect(LightTheme.data.brightness, Brightness.light);
     expect(DarkTheme.data.brightness, Brightness.dark);
-    expect(AppColor.menstrual, const Color(0xFFC62848));
-    expect(AppColor.prediction, const Color(0xFFF59E0B));
-    expect(AppColor.ovulation, const Color(0xFF2E7D5B));
+    final light = LightTheme.data.extension<AppSemanticColors>();
+    final dark = DarkTheme.data.extension<AppSemanticColors>();
+    expect(light, isNotNull);
+    expect(dark, isNotNull);
+
+    for (final colors in [light!, dark!]) {
+      expect(
+        _contrast(colors.menstrualForeground, colors.menstrualBackground),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(colors.predictionForeground, colors.predictionBackground),
+        greaterThanOrEqualTo(4.5),
+      );
+      expect(
+        _contrast(colors.ovulationForeground, colors.ovulationBackground),
+        greaterThanOrEqualTo(4.5),
+      );
+    }
   });
+}
+
+double _contrast(Color foreground, Color background) {
+  final foregroundLuminance = foreground.computeLuminance();
+  final backgroundLuminance = background.computeLuminance();
+  final lighter = foregroundLuminance > backgroundLuminance
+      ? foregroundLuminance
+      : backgroundLuminance;
+  final darker = foregroundLuminance > backgroundLuminance
+      ? backgroundLuminance
+      : foregroundLuminance;
+  return (lighter + 0.05) / (darker + 0.05);
 }

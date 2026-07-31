@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'app_color.dart';
 import 'app_radius.dart';
+import 'app_semantic_colors.dart';
 import 'app_text_style.dart';
 
 abstract final class LightTheme {
@@ -14,6 +15,7 @@ abstract final class LightTheme {
       surface: AppColor.lightSurface,
     ),
     scaffoldBackgroundColor: AppColor.lightSurface,
+    extensions: const [AppSemanticColors.light],
     textTheme: const TextTheme(
       displaySmall: AppTextStyle.display,
       titleLarge: AppTextStyle.title,

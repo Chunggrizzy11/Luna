@@ -45,23 +45,36 @@ class SecureStorageService {
         throw const FormatException('Secure identity is not an object');
       }
       return DeviceIdentity.fromJson(decoded);
-    } on FormatException catch (error) {
-      await _backend.delete(_identityKey);
-      throw StorageException('Secure device identity is corrupt.', error);
+    } on FormatException {
+      try {
+        await _backend.delete(_identityKey);
+      } catch (_) {
+        throw const StorageException(
+          'Could not safely remove corrupt device identity.',
+          reason: StorageFailureReason.cleanupFailed,
+        );
+      }
+      throw const StorageException(
+        'Secure device identity is corrupt.',
+        reason: StorageFailureReason.corruptIdentity,
+      );
     } on StorageException {
       rethrow;
-    } catch (error) {
-      throw StorageException('Could not read secure device identity.', error);
+    } catch (_) {
+      throw const StorageException(
+        'Could not read secure device identity.',
+        reason: StorageFailureReason.readFailed,
+      );
     }
   }
 
   Future<void> writeIdentity(DeviceIdentity identity) async {
     try {
       await _backend.write(_identityKey, jsonEncode(identity.toJson()));
-    } catch (error) {
-      throw StorageException(
+    } catch (_) {
+      throw const StorageException(
         'Could not persist secure device identity.',
-        error,
+        reason: StorageFailureReason.writeFailed,
       );
     }
   }
@@ -69,8 +82,11 @@ class SecureStorageService {
   Future<void> clearIdentity() async {
     try {
       await _backend.delete(_identityKey);
-    } catch (error) {
-      throw StorageException('Could not clear secure device identity.', error);
+    } catch (_) {
+      throw const StorageException(
+        'Could not clear secure device identity.',
+        reason: StorageFailureReason.deleteFailed,
+      );
     }
   }
 }
