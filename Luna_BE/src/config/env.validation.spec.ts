@@ -28,6 +28,15 @@ describe('validateEnvironment', () => {
     ).toThrow('ALLOW_INSECURE_HTTP cannot be true in production');
   });
 
+  it('rejects production without an explicit MONGODB_URI', () => {
+    expect(() =>
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DEVICE_TOKEN_PEPPER: 'unit-test-device-token-pepper',
+      }),
+    ).toThrow('MONGODB_URI is required in production');
+  });
+
   it('applies the UAT MongoDB default', () => {
     expect(validateEnvironment(validUat).MONGODB_URI).toBe(
       'mongodb://127.0.0.1:27017/luna_uat',

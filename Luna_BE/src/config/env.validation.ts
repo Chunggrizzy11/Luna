@@ -6,6 +6,7 @@ export interface Environment {
   MONGODB_URI: string;
   DEVICE_TOKEN_PEPPER: string;
   ALLOW_INSECURE_HTTP: boolean;
+  TRUST_PROXY: boolean;
   CORS_ORIGINS: string;
   FCM_SERVICE_ACCOUNT_JSON?: string;
 }
@@ -55,6 +56,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   if (nodeEnvironment === 'production' && allowInsecureHttp) {
     throw new Error('ALLOW_INSECURE_HTTP cannot be true in production');
   }
+  const trustProxy = parseBoolean(config.TRUST_PROXY, 'TRUST_PROXY', false);
 
   const pepper = config.DEVICE_TOKEN_PEPPER;
   const deviceTokenPepper =
@@ -67,7 +69,14 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     throw new Error('DEVICE_TOKEN_PEPPER is required');
   }
 
-  const mongoUri = config.MONGODB_URI ?? defaultMongoUri;
+  const configuredMongoUri = config.MONGODB_URI;
+  if (
+    nodeEnvironment === 'production' &&
+    (typeof configuredMongoUri !== 'string' || configuredMongoUri.trim().length === 0)
+  ) {
+    throw new Error('MONGODB_URI is required in production');
+  }
+  const mongoUri = configuredMongoUri ?? defaultMongoUri;
   if (typeof mongoUri !== 'string' || mongoUri.trim().length === 0) {
     throw new Error('MONGODB_URI must be a non-empty string');
   }
@@ -91,6 +100,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     MONGODB_URI: mongoUri,
     DEVICE_TOKEN_PEPPER: deviceTokenPepper,
     ALLOW_INSECURE_HTTP: allowInsecureHttp,
+    TRUST_PROXY: trustProxy,
     CORS_ORIGINS: corsOrigins,
     ...(fcmServiceAccountJson ? { FCM_SERVICE_ACCOUNT_JSON: fcmServiceAccountJson } : {}),
   };

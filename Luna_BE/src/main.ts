@@ -3,19 +3,34 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
+import type { Express } from 'express';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
+import { createTransportSecurityMiddleware } from './common/middleware/transport-security.middleware';
+import type { NodeEnvironment } from './config/env.validation';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const corsOrigins = configService.getOrThrow<string[]>('app.corsOrigins');
+  const trustProxy = configService.getOrThrow<boolean>('app.TRUST_PROXY');
+  const expressApp = app.getHttpAdapter().getInstance() as Express;
 
   app.setGlobalPrefix('api/v1');
+  expressApp.set('trust proxy', trustProxy);
   app.use(helmet());
   app.use(compression());
+  app.use(
+    createTransportSecurityMiddleware({
+      nodeEnvironment: configService.getOrThrow<NodeEnvironment>('app.NODE_ENV'),
+      allowInsecureHttp: configService.getOrThrow<boolean>(
+        'app.ALLOW_INSECURE_HTTP',
+      ),
+      trustProxy,
+    }),
+  );
   app.enableCors({
     credentials: true,
     origin: (
