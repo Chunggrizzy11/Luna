@@ -1,3 +1,5 @@
+import { isIP } from 'node:net';
+
 export type NodeEnvironment = 'development' | 'test' | 'uat' | 'production';
 
 export interface Environment {
@@ -7,6 +9,7 @@ export interface Environment {
   DEVICE_TOKEN_PEPPER: string;
   ALLOW_INSECURE_HTTP: boolean;
   TRUST_PROXY: boolean;
+  TRUSTED_PROXY_IPS: string[];
   CORS_ORIGINS: string;
   FCM_SERVICE_ACCOUNT_JSON?: string;
 }
@@ -35,6 +38,46 @@ function parseBoolean(value: unknown, name: string, defaultValue: boolean): bool
   throw new Error(`${name} must be true or false`);
 }
 
+function parseTrustedProxyIps(value: unknown): string[] {
+  if (value === undefined || value === '') {
+    return [];
+  }
+
+  if (typeof value !== 'string') {
+    throw new Error('TRUSTED_PROXY_IPS must be a comma-separated string');
+  }
+
+  const addresses = value
+    .split(',')
+    .map((address) => address.trim())
+    .filter(Boolean);
+  const hasInvalidAddress = addresses.some((address) => {
+    const [ip, prefix, ...extraSegments] = address.split('/');
+    const ipVersion = isIP(ip);
+    if (extraSegments.length > 0 || ipVersion === 0) {
+      return true;
+    }
+
+    if (prefix === undefined) {
+      return false;
+    }
+
+    const maxPrefixLength = ipVersion === 4 ? 32 : 128;
+    const prefixLength = Number(prefix);
+    return (
+      !/^\d+$/.test(prefix) ||
+      !Number.isInteger(prefixLength) ||
+      prefixLength > maxPrefixLength
+    );
+  });
+
+  if (hasInvalidAddress) {
+    throw new Error('TRUSTED_PROXY_IPS must contain valid IP addresses or CIDRs');
+  }
+
+  return addresses;
+}
+
 export function validateEnvironment(config: Record<string, unknown>): Environment {
   const nodeEnvironment = (config.NODE_ENV ?? 'development') as string;
 
@@ -57,6 +100,10 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     throw new Error('ALLOW_INSECURE_HTTP cannot be true in production');
   }
   const trustProxy = parseBoolean(config.TRUST_PROXY, 'TRUST_PROXY', false);
+  const trustedProxyIps = parseTrustedProxyIps(config.TRUSTED_PROXY_IPS);
+  if (trustProxy && trustedProxyIps.length === 0) {
+    throw new Error('TRUSTED_PROXY_IPS is required when TRUST_PROXY is true');
+  }
 
   const pepper = config.DEVICE_TOKEN_PEPPER;
   const deviceTokenPepper =
@@ -101,6 +148,7 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     DEVICE_TOKEN_PEPPER: deviceTokenPepper,
     ALLOW_INSECURE_HTTP: allowInsecureHttp,
     TRUST_PROXY: trustProxy,
+    TRUSTED_PROXY_IPS: trustedProxyIps,
     CORS_ORIGINS: corsOrigins,
     ...(fcmServiceAccountJson ? { FCM_SERVICE_ACCOUNT_JSON: fcmServiceAccountJson } : {}),
   };

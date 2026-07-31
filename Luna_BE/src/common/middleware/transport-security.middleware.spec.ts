@@ -1,16 +1,27 @@
 import type { Request, Response } from 'express';
-import { createTransportSecurityMiddleware } from './transport-security.middleware';
+import {
+  createTransportSecurityMiddleware,
+  createTrustedProxyTrust,
+} from './transport-security.middleware';
 
 describe('createTransportSecurityMiddleware', () => {
   const createRequest = (options?: {
     encrypted?: boolean;
     forwardedProtocol?: string;
+    remoteAddress?: string;
+    secure?: boolean;
   }) =>
     ({
-      socket: options?.encrypted ? { encrypted: true } : {},
+      socket: {
+        ...(options?.encrypted ? { encrypted: true } : {}),
+        ...(options?.remoteAddress
+          ? { remoteAddress: options.remoteAddress }
+          : {}),
+      },
       headers: options?.forwardedProtocol
         ? { 'x-forwarded-proto': options.forwardedProtocol }
         : {},
+      secure: options?.secure,
     }) as Request;
 
   const createResponse = () => ({}) as Response;
@@ -20,7 +31,7 @@ describe('createTransportSecurityMiddleware', () => {
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
-      trustProxy: false,
+      trustedProxy: undefined,
     });
 
     middleware(
@@ -38,7 +49,7 @@ describe('createTransportSecurityMiddleware', () => {
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
-      trustProxy: false,
+      trustedProxy: undefined,
     });
 
     middleware(createRequest({ encrypted: true }), createResponse(), next);
@@ -51,7 +62,7 @@ describe('createTransportSecurityMiddleware', () => {
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: true,
-      trustProxy: false,
+      trustedProxy: undefined,
     });
 
     middleware(createRequest(), createResponse(), next);
@@ -59,16 +70,41 @@ describe('createTransportSecurityMiddleware', () => {
     expect(next.mock.calls[0][0].getStatus()).toBe(426);
   });
 
-  it('permits forwarded HTTPS only when reverse-proxy trust is enabled', () => {
+  it('rejects forwarded HTTPS from an untrusted remote address', () => {
     const next = jest.fn();
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
-      trustProxy: true,
+      trustedProxy: createTrustedProxyTrust(['127.0.0.1']),
     });
 
     middleware(
-      createRequest({ forwardedProtocol: 'https' }),
+      createRequest({
+        forwardedProtocol: 'https',
+        remoteAddress: '203.0.113.10',
+        secure: true,
+      }),
+      createResponse(),
+      next,
+    );
+
+    expect(next.mock.calls[0][0].getStatus()).toBe(426);
+  });
+
+  it('permits forwarded HTTPS from a trusted remote address', () => {
+    const next = jest.fn();
+    const middleware = createTransportSecurityMiddleware({
+      nodeEnvironment: 'production',
+      allowInsecureHttp: false,
+      trustedProxy: createTrustedProxyTrust(['127.0.0.1']),
+    });
+
+    middleware(
+      createRequest({
+        forwardedProtocol: 'https',
+        remoteAddress: '127.0.0.1',
+        secure: true,
+      }),
       createResponse(),
       next,
     );
@@ -81,7 +117,7 @@ describe('createTransportSecurityMiddleware', () => {
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'uat',
       allowInsecureHttp: true,
-      trustProxy: false,
+      trustedProxy: undefined,
     });
 
     middleware(createRequest(), createResponse(), next);
@@ -94,7 +130,7 @@ describe('createTransportSecurityMiddleware', () => {
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'uat',
       allowInsecureHttp: false,
-      trustProxy: false,
+      trustedProxy: undefined,
     });
 
     middleware(createRequest(), createResponse(), next);

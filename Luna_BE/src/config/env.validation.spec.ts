@@ -37,6 +37,42 @@ describe('validateEnvironment', () => {
     ).toThrow('MONGODB_URI is required in production');
   });
 
+  it('rejects production proxy trust with an empty trusted proxy allowlist', () => {
+    expect(() =>
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DEVICE_TOKEN_PEPPER: 'unit-test-device-token-pepper',
+        MONGODB_URI: 'mongodb://db.internal/luna',
+        TRUST_PROXY: 'true',
+        TRUSTED_PROXY_IPS: ' , ',
+      }),
+    ).toThrow('TRUSTED_PROXY_IPS is required when TRUST_PROXY is true');
+  });
+
+  it('rejects invalid trusted proxy IP entries', () => {
+    expect(() =>
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DEVICE_TOKEN_PEPPER: 'unit-test-device-token-pepper',
+        MONGODB_URI: 'mongodb://db.internal/luna',
+        TRUST_PROXY: 'true',
+        TRUSTED_PROXY_IPS: 'not-an-ip',
+      }),
+    ).toThrow('TRUSTED_PROXY_IPS must contain valid IP addresses or CIDRs');
+  });
+
+  it('parses explicit trusted proxy IP and CIDR entries', () => {
+    expect(
+      validateEnvironment({
+        NODE_ENV: 'production',
+        DEVICE_TOKEN_PEPPER: 'unit-test-device-token-pepper',
+        MONGODB_URI: 'mongodb://db.internal/luna',
+        TRUST_PROXY: 'true',
+        TRUSTED_PROXY_IPS: '127.0.0.1,10.0.0.0/8',
+      }).TRUSTED_PROXY_IPS,
+    ).toEqual(['127.0.0.1', '10.0.0.0/8']);
+  });
+
   it('applies the UAT MongoDB default', () => {
     expect(validateEnvironment(validUat).MONGODB_URI).toBe(
       'mongodb://127.0.0.1:27017/luna_uat',

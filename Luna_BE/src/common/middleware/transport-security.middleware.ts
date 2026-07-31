@@ -1,37 +1,44 @@
 import { HttpException } from '@nestjs/common';
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { TLSSocket } from 'node:tls';
+import proxyaddr from 'proxy-addr';
 import type { NodeEnvironment } from '../../config/env.validation';
+
+export type TrustedProxy = (address: string, index: number) => boolean;
 
 export interface TransportSecurityOptions {
   nodeEnvironment: NodeEnvironment;
   allowInsecureHttp: boolean;
-  trustProxy: boolean;
+  trustedProxy?: TrustedProxy;
+}
+
+export function createTrustedProxyTrust(
+  trustedProxyIps: string[],
+): TrustedProxy {
+  return proxyaddr.compile(trustedProxyIps);
 }
 
 function hasDirectTls(request: Request): boolean {
   return (request.socket as TLSSocket).encrypted === true;
 }
 
-function hasTrustedForwardedTls(
+function hasTrustedProxyTls(
   request: Request,
-  trustProxy: boolean,
+  trustedProxy: TrustedProxy | undefined,
 ): boolean {
-  if (!trustProxy) {
+  const remoteAddress = request.socket.remoteAddress;
+  if (!trustedProxy || !remoteAddress || !trustedProxy(remoteAddress, 0)) {
     return false;
   }
 
-  const header = request.headers['x-forwarded-proto'];
-  const forwardedProtocol = Array.isArray(header) ? header[0] : header;
-
-  return forwardedProtocol?.split(',')[0].trim().toLowerCase() === 'https';
+  return request.secure === true;
 }
 
 function isSecureTransport(
   request: Request,
-  trustProxy: boolean,
+  trustedProxy: TrustedProxy | undefined,
 ): boolean {
-  return hasDirectTls(request) || hasTrustedForwardedTls(request, trustProxy);
+  return hasDirectTls(request) || hasTrustedProxyTls(request, trustedProxy);
 }
 
 export function createTransportSecurityMiddleware(
@@ -43,7 +50,7 @@ export function createTransportSecurityMiddleware(
     next: NextFunction,
   ): void => {
     if (
-      isSecureTransport(request, options.trustProxy) ||
+      isSecureTransport(request, options.trustedProxy) ||
       (options.nodeEnvironment !== 'production' && options.allowInsecureHttp)
     ) {
       next();

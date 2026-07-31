@@ -8,7 +8,10 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 import { HttpExceptionFilter } from './common/filters/http-exception.filter';
 import { ApiResponseInterceptor } from './common/interceptors/api-response.interceptor';
-import { createTransportSecurityMiddleware } from './common/middleware/transport-security.middleware';
+import {
+  createTransportSecurityMiddleware,
+  createTrustedProxyTrust,
+} from './common/middleware/transport-security.middleware';
 import type { NodeEnvironment } from './config/env.validation';
 
 async function bootstrap() {
@@ -16,10 +19,16 @@ async function bootstrap() {
   const configService = app.get(ConfigService);
   const corsOrigins = configService.getOrThrow<string[]>('app.corsOrigins');
   const trustProxy = configService.getOrThrow<boolean>('app.TRUST_PROXY');
+  const trustedProxyIps = configService.getOrThrow<string[]>(
+    'app.trustedProxyIps',
+  );
+  const trustedProxy = trustProxy
+    ? createTrustedProxyTrust(trustedProxyIps)
+    : undefined;
   const expressApp = app.getHttpAdapter().getInstance() as Express;
 
   app.setGlobalPrefix('api/v1');
-  expressApp.set('trust proxy', trustProxy);
+  expressApp.set('trust proxy', trustedProxy ?? false);
   app.use(helmet());
   app.use(compression());
   app.use(
@@ -28,7 +37,7 @@ async function bootstrap() {
       allowInsecureHttp: configService.getOrThrow<boolean>(
         'app.ALLOW_INSECURE_HTTP',
       ),
-      trustProxy,
+      trustedProxy,
     }),
   );
   app.enableCors({
