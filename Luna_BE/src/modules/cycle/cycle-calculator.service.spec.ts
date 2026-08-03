@@ -135,6 +135,49 @@ describe('cycle calculator', () => {
       expect(summary.ovulationDate).toBeNull();
     });
 
+    it('keeps an unended latest cycle active after its estimated period length', () => {
+      const summary = calculateCycleSummary(
+        [{ startDate: '2026-03-01' }],
+        settings,
+        '2026-03-12',
+      );
+
+      expect(summary).toMatchObject({
+        currentCycleDay: 12,
+        isPeriodActive: true,
+        observedPeriods: [{ startDate: '2026-03-01', endDate: '2026-03-12' }],
+      });
+    });
+
+    it('treats future-only records as no started history and returns a calendar-safe summary', () => {
+      const summary = calculateCycleSummary(
+        [{ startDate: '2026-04-01' }],
+        settings,
+        '2026-03-12',
+      );
+
+      expect(summary).toMatchObject({
+        currentCycleDay: null,
+        predictedPeriodStart: null,
+        observedPeriods: [],
+      });
+      expect(() => buildCalendarDays(summary, '2026-03')).not.toThrow();
+    });
+
+    it('uses the latest already-started record when later records are in the future', () => {
+      const summary = calculateCycleSummary(
+        [{ startDate: '2026-03-01' }, { startDate: '2026-04-01' }],
+        settings,
+        '2026-03-12',
+      );
+
+      expect(summary).toMatchObject({
+        currentCycleDay: 12,
+        predictedPeriodStart: '2026-03-29',
+        observedPeriods: [{ startDate: '2026-03-01', endDate: '2026-03-12' }],
+      });
+    });
+
     it.each([
       ['2026-2-03', '2026-03-03'],
       ['2026-02-30', '2026-03-03'],
@@ -150,6 +193,50 @@ describe('cycle calculator', () => {
           [],
           { ...settings, defaultCycleLength: 0 },
           '2026-03-03',
+        ),
+      ).toThrow(CycleCalculationError);
+    });
+
+    it.each([
+      [{ ...settings, defaultCycleLength: Number.MAX_SAFE_INTEGER }],
+      [{ ...settings, defaultPeriodLength: 29 }],
+    ])(
+      'rejects unsafe or inconsistent settings with a domain error',
+      (invalidSettings) => {
+        expect(() =>
+          calculateCycleSummary([], invalidSettings, '2026-03-03'),
+        ).toThrow(CycleCalculationError);
+      },
+    );
+
+    it('ignores unsafe persisted average candidates instead of leaking native date errors', () => {
+      const summary = calculateCycleSummary(
+        [
+          {
+            startDate: '2026-01-01',
+            endDate: '2026-01-05',
+            periodLength: Number.MAX_SAFE_INTEGER,
+            cycleLength: Number.MAX_SAFE_INTEGER,
+          },
+          { startDate: '2026-03-01' },
+        ],
+        settings,
+        '2026-03-03',
+      );
+
+      expect(summary).toMatchObject({
+        averageCycleLength: 28,
+        averagePeriodLength: 5,
+        predictedPeriodStart: '2026-03-29',
+      });
+    });
+
+    it('throws a typed error instead of a native date error when a prediction exceeds the date range', () => {
+      expect(() =>
+        calculateCycleSummary(
+          [{ startDate: '9999-12-31' }],
+          { ...settings, defaultCycleLength: 1, defaultPeriodLength: 1 },
+          '9999-12-31',
         ),
       ).toThrow(CycleCalculationError);
     });

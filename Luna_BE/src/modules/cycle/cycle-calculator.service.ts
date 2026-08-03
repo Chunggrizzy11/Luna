@@ -12,6 +12,8 @@ const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_RECENT_CYCLES = 6;
+const MAX_CYCLE_LENGTH = 365;
+const MAX_PERIOD_LENGTH = 90;
 
 type DateOnly = Date;
 
@@ -24,15 +26,18 @@ export function calculateCycleSummary(
   const normalizedToday = parseDateOnly(today);
   const normalizedCycles = cycles
     .map(normalizeCycle)
+    .filter((cycle) => cycle.start <= normalizedToday)
     .sort((left, right) => left.start.getTime() - right.start.getTime());
   const completeCycles = normalizedCycles.filter((cycle) => cycle.end !== null);
   const completeCycleLengths = recentPositiveValues(
     completeCycles,
     (cycle) => cycle.cycleLength,
+    MAX_CYCLE_LENGTH,
   );
   const completePeriodLengths = recentPositiveValues(
     completeCycles,
     (cycle) => cycle.periodLength,
+    MAX_PERIOD_LENGTH,
   );
   const averageCycleLength =
     completeCycleLengths.length >= 2
@@ -68,10 +73,7 @@ export function calculateCycleSummary(
 
   return {
     currentCycleDay,
-    isPeriodActive:
-      latestCycle.end === null &&
-      currentCycleDay >= 1 &&
-      currentCycleDay <= averagePeriodLength,
+    isPeriodActive: latestCycle.end === null,
     daysUntilNextPeriod: daysBetween(normalizedToday, predictedStart),
     averageCycleLength,
     averagePeriodLength,
@@ -152,18 +154,28 @@ function normalizeCycle(cycle: CycleRecord): NormalizedCycle {
   return {
     start,
     end,
-    periodLength: positiveIntegerOrNull(cycle.periodLength),
-    cycleLength: positiveIntegerOrNull(cycle.cycleLength),
+    periodLength: boundedPositiveIntegerOrNull(
+      cycle.periodLength,
+      MAX_PERIOD_LENGTH,
+    ),
+    cycleLength: boundedPositiveIntegerOrNull(
+      cycle.cycleLength,
+      MAX_CYCLE_LENGTH,
+    ),
   };
 }
 
 function recentPositiveValues<T>(
   records: readonly T[],
   getValue: (record: T) => number | null,
+  maximum: number,
 ): number[] {
   return records
     .map(getValue)
-    .filter((value): value is number => value !== null)
+    .filter(
+      (value): value is number =>
+        value !== null && isBoundedPositiveInteger(value, maximum),
+    )
     .slice(-MAX_RECENT_CYCLES);
 }
 
@@ -175,8 +187,12 @@ function roundedMean(values: readonly number[]): number {
 
 function validateSettings(settings: CycleSettings): void {
   if (
-    !isPositiveInteger(settings.defaultCycleLength) ||
-    !isPositiveInteger(settings.defaultPeriodLength) ||
+    !isBoundedPositiveInteger(settings.defaultCycleLength, MAX_CYCLE_LENGTH) ||
+    !isBoundedPositiveInteger(
+      settings.defaultPeriodLength,
+      MAX_PERIOD_LENGTH,
+    ) ||
+    settings.defaultPeriodLength > settings.defaultCycleLength ||
     typeof settings.ovulationEnabled !== 'boolean'
   ) {
     throw new CycleCalculationError(
@@ -220,7 +236,9 @@ function parseMonth(value: string): DateOnly {
 }
 
 function addDays(date: DateOnly, days: number): DateOnly {
-  return new Date(date.getTime() + days * DAY_MS);
+  const result = new Date(date.getTime() + days * DAY_MS);
+  assertSupportedDate(result);
+  return result;
 }
 
 function daysBetween(start: DateOnly, end: DateOnly): number {
@@ -228,6 +246,7 @@ function daysBetween(start: DateOnly, end: DateOnly): number {
 }
 
 function formatDateOnly(date: DateOnly): string {
+  assertSupportedDate(date);
   return date.toISOString().slice(0, 10);
 }
 
@@ -267,12 +286,31 @@ function validateSummaryDates(summary: CycleSummary): void {
   }
 }
 
-function positiveIntegerOrNull(
+function boundedPositiveIntegerOrNull(
   value: number | null | undefined,
+  maximum: number,
 ): number | null {
-  return isPositiveInteger(value) ? value : null;
+  return isBoundedPositiveInteger(value, maximum) ? value : null;
 }
 
-function isPositiveInteger(value: unknown): value is number {
-  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+function isBoundedPositiveInteger(
+  value: unknown,
+  maximum: number,
+): value is number {
+  return (
+    typeof value === 'number' &&
+    Number.isInteger(value) &&
+    value > 0 &&
+    value <= maximum
+  );
+}
+
+function assertSupportedDate(date: DateOnly): void {
+  const year = date.getUTCFullYear();
+  if (!Number.isFinite(date.getTime()) || year < 1 || year > 9999) {
+    throw new CycleCalculationError(
+      'INVALID_DATE',
+      'Date is outside the supported range.',
+    );
+  }
 }
