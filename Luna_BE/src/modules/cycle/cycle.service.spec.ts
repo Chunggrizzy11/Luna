@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import type { Model } from 'mongoose';
+import type { ClientSession, Connection, Model } from 'mongoose';
 import { DeviceRole, DeviceStatus } from '../device/schemas/device.schema';
 import {
   CYCLE_SETTINGS_PROVIDER,
@@ -23,6 +23,7 @@ const partner = { ...owner, role: DeviceRole.PARTNER };
 function query<T>(value: T) {
   const chain = {
     sort: jest.fn().mockReturnThis(),
+    session: jest.fn().mockReturnThis(),
     skip: jest.fn().mockReturnThis(),
     limit: jest.fn().mockReturnThis(),
     lean: jest.fn().mockReturnThis(),
@@ -39,6 +40,7 @@ describe('CycleService', () => {
     >
   >;
   let settings: jest.Mocked<CycleSettingsProvider>;
+  let connection: Pick<Connection, 'transaction'>;
   let service: CycleService;
 
   beforeEach(() => {
@@ -56,31 +58,46 @@ describe('CycleService', () => {
         ovulationEnabled: false,
       }),
     };
-    service = new CycleService(model as unknown as Model<Cycle>, settings);
+    const transaction = <T>(
+      callback: (session: ClientSession) => Promise<T>,
+    ): Promise<T> => callback({} as ClientSession);
+    connection = { transaction: jest.fn(transaction) };
+    service = new CycleService(
+      model as unknown as Model<Cycle>,
+      settings,
+      connection as Connection,
+    );
   });
 
   it('starts a manual active cycle with an explicit null end date', async () => {
     model.findOne.mockReturnValueOnce(query(null) as never);
     model.findOne.mockReturnValueOnce(query(null) as never);
-    model.create.mockResolvedValue({
-      _id: 'cycle-1',
-      ownerDeviceId: owner.deviceId,
-      startDate: '2026-03-01',
-      endDate: null,
-      source: 'manual',
-    } as never);
+    model.create.mockResolvedValue([
+      {
+        _id: 'cycle-1',
+        ownerDeviceId: owner.deviceId,
+        startDate: '2026-03-01',
+        endDate: null,
+        source: 'manual',
+      },
+    ] as never);
 
     await expect(service.start(owner, '2026-03-01')).resolves.toMatchObject({
       startDate: '2026-03-01',
       endDate: null,
       source: 'manual',
     });
-    expect(model.create).toHaveBeenCalledWith({
-      ownerDeviceId: owner.deviceId,
-      startDate: '2026-03-01',
-      endDate: null,
-      source: 'manual',
-    });
+    expect(model.create).toHaveBeenCalledWith(
+      [
+        {
+          ownerDeviceId: owner.deviceId,
+          startDate: '2026-03-01',
+          endDate: null,
+          source: 'manual',
+        },
+      ],
+      expect.objectContaining({}),
+    );
   });
 
   it('rejects a second active cycle for the same owner', async () => {
@@ -108,20 +125,22 @@ describe('CycleService', () => {
     model.findOne.mockReturnValueOnce(query(null) as never);
     model.findOne.mockReturnValueOnce(query(previous) as never);
     model.findOneAndUpdate.mockReturnValueOnce(query(previous) as never);
-    model.create.mockResolvedValue({
-      _id: 'new',
-      ownerDeviceId: owner.deviceId,
-      startDate: '2026-03-01',
-      endDate: null,
-      source: 'manual',
-    } as never);
+    model.create.mockResolvedValue([
+      {
+        _id: 'new',
+        ownerDeviceId: owner.deviceId,
+        startDate: '2026-03-01',
+        endDate: null,
+        source: 'manual',
+      },
+    ] as never);
 
     await service.start(owner, '2026-03-01');
 
     expect(model.findOneAndUpdate).toHaveBeenCalledWith(
       { _id: 'previous', ownerDeviceId: owner.deviceId },
       { cycleLength: 28 },
-      { runValidators: true },
+      expect.objectContaining({ runValidators: true }),
     );
   });
 
@@ -140,31 +159,28 @@ describe('CycleService', () => {
     expect(model.findOneAndUpdate).not.toHaveBeenCalled();
   });
 
-  it('removes only its newly reserved active cycle if the predecessor update fails', async () => {
+  it('aborts the transactional start without a best-effort cleanup if the predecessor update fails', async () => {
     const previous = { _id: 'previous', startDate: '2026-02-01' };
     const updateFailure = new Error('write failed');
     model.findOne.mockReturnValueOnce(query(null) as never);
     model.findOne.mockReturnValueOnce(query(previous) as never);
-    model.create.mockResolvedValue({
-      _id: 'new-cycle',
-      ownerDeviceId: owner.deviceId,
-      startDate: '2026-03-01',
-      endDate: null,
-      source: 'manual',
-    } as never);
+    model.create.mockResolvedValue([
+      {
+        _id: 'new-cycle',
+        ownerDeviceId: owner.deviceId,
+        startDate: '2026-03-01',
+        endDate: null,
+        source: 'manual',
+      },
+    ] as never);
     model.findOneAndUpdate.mockReturnValueOnce({
       exec: jest.fn().mockRejectedValue(updateFailure),
     } as never);
-    model.deleteOne.mockReturnValueOnce(query({ acknowledged: true }) as never);
 
     await expect(service.start(owner, '2026-03-01')).rejects.toBe(
       updateFailure,
     );
-    expect(model.deleteOne).toHaveBeenCalledWith({
-      _id: 'new-cycle',
-      ownerDeviceId: owner.deviceId,
-      endDate: null,
-    });
+    expect(model.deleteOne).not.toHaveBeenCalled();
   });
 
   it('ends an active cycle and calculates same-day periods as one day', async () => {

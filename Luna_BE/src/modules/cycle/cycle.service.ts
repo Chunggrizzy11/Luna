@@ -6,8 +6,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import type { Model } from 'mongoose';
+import { InjectConnection, InjectModel } from '@nestjs/mongoose';
+import type { ClientSession, Connection, Model } from 'mongoose';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { DeviceRole } from '../device/schemas/device.schema';
 import { calculateCycleSummary } from './cycle-calculator.service';
@@ -46,6 +46,7 @@ export class CycleService {
     @InjectModel(Cycle.name) private readonly cycleModel: Model<Cycle>,
     @Inject(CYCLE_SETTINGS_PROVIDER)
     private readonly settingsProvider: CycleSettingsProvider,
+    @InjectConnection() private readonly connection: Connection,
   ) {}
 
   async start(
@@ -54,8 +55,26 @@ export class CycleService {
   ): Promise<CycleResponse> {
     this.requireOwner(owner);
     const startDate = this.assertDateOnly(date);
+    try {
+      return await this.connection.transaction((session) =>
+        this.startInTransaction(owner, startDate, session),
+      );
+    } catch (error: unknown) {
+      if (this.isDuplicateKeyError(error)) {
+        throw new ConflictException('An active cycle already exists.');
+      }
+      throw error;
+    }
+  }
+
+  private async startInTransaction(
+    owner: AuthenticatedDevice,
+    startDate: string,
+    session: ClientSession,
+  ): Promise<CycleResponse> {
     const active = await this.cycleModel
       .findOne({ ownerDeviceId: owner.deviceId, endDate: null })
+      .session(session)
       .lean()
       .exec();
     if (active) {
@@ -69,6 +88,7 @@ export class CycleService {
         startDate: { $lt: startDate },
       })
       .sort({ startDate: -1, _id: -1 })
+      .session(session)
       .lean()
       .exec();
     const derivedCycleLength = previous
@@ -83,45 +103,28 @@ export class CycleService {
       );
     }
 
-    let created: Cycle & { _id: unknown };
-    try {
-      created = (await this.cycleModel.create({
-        ownerDeviceId: owner.deviceId,
-        startDate,
-        endDate: null,
-        source: CycleSource.MANUAL,
-      })) as Cycle & { _id: unknown };
-    } catch (error: unknown) {
-      if (this.isDuplicateKeyError(error)) {
-        throw new ConflictException('An active cycle already exists.');
-      }
-      throw error;
-    }
+    const [created] = await this.cycleModel.create(
+      [
+        {
+          ownerDeviceId: owner.deviceId,
+          startDate,
+          endDate: null,
+          source: CycleSource.MANUAL,
+        },
+      ],
+      { session },
+    );
 
     if (previous && derivedCycleLength !== null) {
-      try {
-        const updatedPrevious = await this.cycleModel
-          .findOneAndUpdate(
-            { _id: previous._id, ownerDeviceId: owner.deviceId },
-            { cycleLength: derivedCycleLength },
-            { runValidators: true },
-          )
-          .exec();
-        if (!updatedPrevious) {
-          throw new Error('The previous cycle could not be updated.');
-        }
-      } catch (error: unknown) {
-        // A reservation without its predecessor update is not a valid start.
-        // Preserve the update failure after best-effort removal of only this request's active record.
-        await this.cycleModel
-          .deleteOne({
-            _id: created._id,
-            ownerDeviceId: owner.deviceId,
-            endDate: null,
-          })
-          .exec()
-          .catch(() => undefined);
-        throw error;
+      const updatedPrevious = await this.cycleModel
+        .findOneAndUpdate(
+          { _id: previous._id, ownerDeviceId: owner.deviceId },
+          { cycleLength: derivedCycleLength },
+          { runValidators: true, session },
+        )
+        .exec();
+      if (!updatedPrevious) {
+        throw new Error('The previous cycle could not be updated.');
       }
     }
 

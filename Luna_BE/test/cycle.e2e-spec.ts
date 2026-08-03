@@ -1,7 +1,7 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, type TestingModule } from '@nestjs/testing';
-import { MongoMemoryServer } from 'mongodb-memory-server';
+import { MongoMemoryReplSet } from 'mongodb-memory-server';
 import type { Model } from 'mongoose';
 import request from 'supertest';
 import type { App } from 'supertest/types';
@@ -42,7 +42,7 @@ function token(responseBody: unknown): string {
 
 describe('Cycle endpoints (e2e)', () => {
   let app: INestApplication<App>;
-  let mongo: MongoMemoryServer;
+  let mongo: MongoMemoryReplSet;
   let savedEnvironment: SavedEnvironment;
   let cycleModel: Model<CycleDocument>;
 
@@ -58,7 +58,7 @@ describe('Cycle endpoints (e2e)', () => {
     savedEnvironment = Object.fromEntries(
       environmentKeys.map((key) => [key, process.env[key]]),
     ) as SavedEnvironment;
-    mongo = await MongoMemoryServer.create();
+    mongo = await MongoMemoryReplSet.create({ replSet: { count: 1 } });
     Object.assign(process.env, {
       NODE_ENV: 'test',
       PORT: '3000',
@@ -288,5 +288,60 @@ describe('Cycle endpoints (e2e)', () => {
     const predecessor = items.find((cycle) => cycle.startDate === '2026-01-01');
     const expectedLength = winningDate === '2026-02-01' ? 31 : 59;
     expect(predecessor).toMatchObject({ cycleLength: expectedLength });
+  });
+
+  it('leaves no active reservation when predecessor update and legacy cleanup both fail', async () => {
+    const ownerToken = await registerDevice('owner');
+    const server = app.getHttpServer();
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-01-01' })
+      .expect(201);
+    await request(server)
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-01-01' })
+      .expect(201);
+
+    const updateFailure = new Error('predecessor write failed');
+    const deleteFailure = new Error('legacy cleanup failed');
+    const updateSpy = jest
+      .spyOn(cycleModel, 'findOneAndUpdate')
+      .mockReturnValueOnce({
+        exec: jest.fn().mockRejectedValue(updateFailure),
+      } as never);
+    const deleteSpy = jest.spyOn(cycleModel, 'deleteOne').mockReturnValueOnce({
+      exec: jest.fn().mockRejectedValue(deleteFailure),
+    } as never);
+    try {
+      await request(server)
+        .post('/api/v1/cycles/start')
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .send({ date: '2026-02-01' })
+        .expect(500);
+    } finally {
+      updateSpy.mockRestore();
+      deleteSpy.mockRestore();
+    }
+
+    const current = await request(server)
+      .get('/api/v1/cycles/current')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(asObject(current.body as unknown).data).toBeNull();
+
+    const history = await request(server)
+      .get('/api/v1/cycles')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const items = asObject(asObject(history.body as unknown).data)
+      .items as Array<Record<string, unknown>>;
+    expect(items).toEqual([
+      expect.objectContaining({
+        startDate: '2026-01-01',
+        cycleLength: null,
+      }),
+    ]);
   });
 });
