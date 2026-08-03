@@ -87,7 +87,7 @@ void main() {
     () async {
       late RequestOptions recorded;
       final dioClient = DioClient(
-        tokenProvider: () async => null,
+        tokenProvider: () async => 'stored-private-token',
         enableLogging: false,
       );
       dioClient.dio.httpClientAdapter = _StubAdapter((options) {
@@ -105,6 +105,7 @@ void main() {
       final identity = await repository.register(DeviceRole.owner);
 
       expect(recorded.path, '/devices/register');
+      expect(recorded.headers, isNot(contains('Authorization')));
       expect(recorded.data, {'role': 'owner', 'platform': 'android'});
       expect(identity.deviceId, 'device-1');
       expect(identity.token, 'issued-token');

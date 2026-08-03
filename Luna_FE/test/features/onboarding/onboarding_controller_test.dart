@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:luna_fe/core/storage/secure_storage_service.dart';
 import 'package:luna_fe/features/onboarding/data/device_repository.dart';
@@ -77,6 +79,23 @@ void main() {
     expect(controller.state, OnboardingState.error);
     expect(controller.errorMessage, isNotEmpty);
   });
+
+  test('concurrent bootstrap calls share one registration', () async {
+    final repository = _BlockingDeviceRepository();
+    final controller = OnboardingController(
+      registerDevice: RegisterDevice(repository),
+      secureStorage: SecureStorageService(backend: _MemorySecureStorage()),
+    );
+
+    final first = controller.bootstrap(DeviceRole.owner);
+    final second = controller.bootstrap(DeviceRole.owner);
+    await repository.started.future;
+    repository.complete();
+
+    final identities = await Future.wait([first, second]);
+    expect(repository.registrationCount, 1);
+    expect(identities[0], same(identities[1]));
+  });
 }
 
 class _FakeDeviceRepository implements DeviceRegistrationRepository {
@@ -93,6 +112,29 @@ class _FakeDeviceRepository implements DeviceRegistrationRepository {
       deviceId: 'device-$registrationCount',
       token: 'issued-token',
       role: role,
+    );
+  }
+}
+
+class _BlockingDeviceRepository implements DeviceRegistrationRepository {
+  final started = Completer<void>();
+  final _result = Completer<DeviceIdentity>();
+  int registrationCount = 0;
+
+  @override
+  Future<DeviceIdentity> register(DeviceRole role) {
+    registrationCount += 1;
+    started.complete();
+    return _result.future;
+  }
+
+  void complete() {
+    _result.complete(
+      const DeviceIdentity(
+        deviceId: 'device-1',
+        token: 'issued-token',
+        role: DeviceRole.owner,
+      ),
     );
   }
 }

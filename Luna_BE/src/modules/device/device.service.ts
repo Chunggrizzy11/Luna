@@ -57,7 +57,7 @@ export class DeviceService {
 
   async updatePushToken(deviceId: string, dto: PushTokenDto): Promise<void> {
     await this.deviceModel
-      .findByIdAndUpdate(deviceId, { pushToken: dto.pushToken })
+      .findByIdAndUpdate(deviceId, { fcmToken: dto.fcmToken })
       .exec();
   }
 

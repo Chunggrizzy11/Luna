@@ -2,7 +2,7 @@
 
 ## Local setup
 
-Install Node.js 22+ and a **MongoDB Server** instance, then install the
+Install Node.js 22.11.0 or newer and a **MongoDB Server** instance, then install the
 backend dependencies:
 
 ```powershell

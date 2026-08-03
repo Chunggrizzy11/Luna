@@ -29,6 +29,16 @@ void main() {
     );
   });
 
+  test('API response preserves explicit null command data', () {
+    final response = ApiResponse<Object?>.fromJson({
+      'data': null,
+      'timestamp': '2026-07-31T00:00:00.000Z',
+    }, (value) => value);
+
+    expect(response.data, isNull);
+    expect(response.timestamp, DateTime.utc(2026, 7, 31));
+  });
+
   test('error mapper distinguishes unauthorized and timeout failures', () {
     final unauthorized = DioException(
       requestOptions: RequestOptions(path: '/devices/me'),

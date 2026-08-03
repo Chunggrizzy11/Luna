@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:luna_fe/core/error/exception.dart';
 import 'package:luna_fe/core/storage/secure_storage_service.dart';
+import 'package:luna_fe/shared/entities/device_identity.dart';
+import 'package:luna_fe/shared/enums/device_role.dart';
 
 void main() {
   test(
@@ -48,7 +50,82 @@ void main() {
       expect(backend.deleteCalls, 1);
     },
   );
+
+  test('backend read failures map to a redacted typed failure', () async {
+    final storage = SecureStorageService(
+      backend: _ThrowingBackend(readError: 'read-backend-secret'),
+    );
+
+    await expectLater(
+      storage.readIdentity(),
+      throwsA(
+        isA<StorageException>()
+            .having(
+              (error) => error.reason,
+              'reason',
+              StorageFailureReason.readFailed,
+            )
+            .having(
+              (error) => error.toString(),
+              'safe message',
+              isNot(contains('read-backend-secret')),
+            ),
+      ),
+    );
+  });
+
+  test('backend write failures map to a redacted typed failure', () async {
+    final storage = SecureStorageService(
+      backend: _ThrowingBackend(writeError: 'write-backend-secret'),
+    );
+
+    await expectLater(
+      storage.writeIdentity(_identity),
+      throwsA(
+        isA<StorageException>()
+            .having(
+              (error) => error.reason,
+              'reason',
+              StorageFailureReason.writeFailed,
+            )
+            .having(
+              (error) => error.toString(),
+              'safe message',
+              isNot(contains('write-backend-secret')),
+            ),
+      ),
+    );
+  });
+
+  test('backend delete failures map to a redacted typed failure', () async {
+    final storage = SecureStorageService(
+      backend: _ThrowingBackend(deleteError: 'delete-backend-secret'),
+    );
+
+    await expectLater(
+      storage.clearIdentity(),
+      throwsA(
+        isA<StorageException>()
+            .having(
+              (error) => error.reason,
+              'reason',
+              StorageFailureReason.deleteFailed,
+            )
+            .having(
+              (error) => error.toString(),
+              'safe message',
+              isNot(contains('delete-backend-secret')),
+            ),
+      ),
+    );
+  });
 }
+
+const _identity = DeviceIdentity(
+  deviceId: 'device-1',
+  token: 'issued-token',
+  role: DeviceRole.owner,
+);
 
 class _MalformedBackend implements SecureStorageBackend {
   _MalformedBackend({this.failDelete = false});
@@ -67,4 +144,28 @@ class _MalformedBackend implements SecureStorageBackend {
 
   @override
   Future<void> write(String key, String value) async {}
+}
+
+class _ThrowingBackend implements SecureStorageBackend {
+  _ThrowingBackend({this.readError, this.writeError, this.deleteError});
+
+  final String? readError;
+  final String? writeError;
+  final String? deleteError;
+
+  @override
+  Future<void> delete(String key) async {
+    if (deleteError != null) throw StateError(deleteError!);
+  }
+
+  @override
+  Future<String?> read(String key) async {
+    if (readError != null) throw StateError(readError!);
+    return null;
+  }
+
+  @override
+  Future<void> write(String key, String value) async {
+    if (writeError != null) throw StateError(writeError!);
+  }
 }

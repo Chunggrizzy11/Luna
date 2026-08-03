@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   HttpStatus,
   InternalServerErrorException,
   Logger,
@@ -9,9 +10,15 @@ import { HttpExceptionFilter } from './http-exception.filter';
 
 describe('HttpExceptionFilter', () => {
   let loggerError: jest.SpyInstance;
+  let loggedErrors: string[];
 
   beforeEach(() => {
-    loggerError = jest.spyOn(Logger.prototype, 'error').mockImplementation();
+    loggedErrors = [];
+    loggerError = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation((message: unknown) => {
+        loggedErrors.push(String(message));
+      });
   });
 
   afterEach(() => {
@@ -114,5 +121,79 @@ describe('HttpExceptionFilter', () => {
     expect(loggerError).not.toHaveBeenCalledWith(
       expect.stringContaining(internalDetails),
     );
+  });
+
+  it('serializes a non-enum HTTP status without throwing', () => {
+    const { host, getResponseBody, getResponseStatus } =
+      createHost('/api/v1/devices/me');
+    const filter = new HttpExceptionFilter();
+
+    expect(() =>
+      filter.catch(
+        new HttpException({ message: ['Client closed request'] }, 499),
+        host,
+      ),
+    ).not.toThrow();
+
+    expect(getResponseStatus()).toBe(499);
+    expect(getResponseBody()).toEqual(
+      expect.objectContaining({
+        code: 'HTTP_499',
+        message: 'HTTP 499',
+        details: ['Client closed request'],
+        path: '/api/v1/devices/me',
+      }),
+    );
+  });
+
+  it('recursively redacts structured secrets from 5xx logs', () => {
+    const { host } = createHost('/api/v1/devices');
+    const filter = new HttpExceptionFilter();
+    const secrets = [
+      'token-value',
+      'password-value',
+      'secret-value',
+      'authorization-value',
+      'fcm-value',
+    ];
+
+    filter.catch(
+      new InternalServerErrorException({
+        message: 'push provider failed',
+        token: secrets[0],
+        nested: {
+          password: secrets[1],
+          items: [
+            { clientSecret: secrets[2] },
+            { Authorization: secrets[3] },
+            { fcmToken: secrets[4] },
+          ],
+        },
+      }),
+      host,
+    );
+
+    const log = loggedErrors[0] ?? '';
+    expect(log).toContain('[REDACTED]');
+    for (const secret of secrets) {
+      expect(log).not.toContain(secret);
+    }
+  });
+
+  it('redacts quoted JSON secrets carried in an error message', () => {
+    const { host } = createHost('/api/v1/devices');
+    const filter = new HttpExceptionFilter();
+
+    filter.catch(
+      new Error(
+        '{"token":"json-token-secret","items":[{"fcmToken":"json-fcm-secret"}]}',
+      ),
+      host,
+    );
+
+    const log = loggedErrors[0] ?? '';
+    expect(log).not.toContain('json-token-secret');
+    expect(log).not.toContain('json-fcm-secret');
+    expect(log).toContain('[REDACTED]');
   });
 });

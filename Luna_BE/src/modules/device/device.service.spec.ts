@@ -102,6 +102,16 @@ describe('DeviceService', () => {
     );
   });
 
+  it('persists the approved FCM token field for push registration', async () => {
+    await service.updatePushToken('device-1', {
+      fcmToken: 'foundation-fcm-token',
+    });
+
+    expect(deviceModel.findByIdAndUpdate).toHaveBeenCalledWith('device-1', {
+      fcmToken: 'foundation-fcm-token',
+    });
+  });
+
   it('persists and authenticates a partner registration with the partner role', async () => {
     const registration = await service.register({
       role: DeviceRole.PARTNER,

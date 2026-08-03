@@ -1,5 +1,5 @@
 export interface ApiSuccessEnvelope<T> {
-  data: T;
+  data: T | null;
   timestamp: string;
 }
 

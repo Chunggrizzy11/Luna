@@ -18,7 +18,7 @@ export class ApiResponseInterceptor<T> implements NestInterceptor<
   ): Observable<ApiSuccessEnvelope<T>> {
     return next.handle().pipe(
       map((data) => ({
-        data,
+        data: data === undefined ? null : data,
         timestamp: new Date().toISOString(),
       })),
     );

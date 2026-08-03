@@ -29,7 +29,7 @@ export class Device {
   deviceName?: string;
 
   @Prop({ trim: true, maxlength: 4096 })
-  pushToken?: string;
+  fcmToken?: string;
 }
 
 export type DeviceDocument = HydratedDocument<Device>;

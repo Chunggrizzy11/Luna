@@ -18,6 +18,21 @@ For an Android emulator, replace the local host with its host alias:
 flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
 ```
 
+The Android debug manifest permits cleartext traffic for this local UAT
+workflow. Profile and release builds explicitly disallow cleartext and require
+HTTPS.
+
+For the iOS Simulator, run a debug build and use the Mac host's loopback URL:
+
+```powershell
+flutter run -d ios --dart-define=API_BASE_URL=http://localhost:3000/api/v1
+```
+
+Only the iOS Debug configuration has the constrained local-network ATS
+allowance needed for Simulator localhost. Physical iOS devices and all
+Profile/Release builds must use an HTTPS API URL; do not use a LAN HTTP address
+for those targets.
+
 ## Run against deployed UAT or production
 
 Use the public HTTPS URL when the backend is behind the trusted TLS-terminator
