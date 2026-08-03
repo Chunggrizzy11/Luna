@@ -63,6 +63,7 @@ describe('CareSuggestionService', () => {
     expect(first.suggestion.id).toEqual(expect.any(String));
     expect(first.suggestion.title).toEqual(expect.any(String));
     expect(first.suggestion.description).toEqual(expect.any(String));
+    expect(first.suggestion.id).toBe('owner-drink');
   });
 
   it('returns an unpaired state instead of attempting a partner suggestion', async () => {

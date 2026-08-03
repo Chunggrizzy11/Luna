@@ -65,6 +65,9 @@ describe('DeviceService', () => {
     expect(devices[0].tokenHash).toBe(
       createHash('sha256').update(`${result.token}${pepper}`).digest('hex'),
     );
+    expect(devices[0].pairId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
   });
 
   it('authenticates an active device from its token', async () => {
@@ -116,9 +119,11 @@ describe('DeviceService', () => {
     const registration = await service.register({
       role: DeviceRole.PARTNER,
       platform: 'android',
+      pairId: 'guessed-owner-pair-id',
     });
 
     expect(devices[0]).toMatchObject({ role: DeviceRole.PARTNER });
+    expect(devices[0].pairId).toBeUndefined();
     await expect(service.authenticate(registration.token)).resolves.toEqual({
       deviceId: 'device-1',
       role: DeviceRole.PARTNER,

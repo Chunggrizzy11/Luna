@@ -120,32 +120,53 @@ export class DashboardService {
     device: AuthenticatedDevice,
   ): Promise<AudienceResolution> {
     if (device.role === DeviceRole.OWNER) {
+      const owner = await this.deviceModel
+        .findOne({
+          _id: device.deviceId,
+          role: DeviceRole.OWNER,
+          status: DeviceStatus.ACTIVE,
+        })
+        .select('_id pairId')
+        .lean()
+        .exec();
+      if (!owner?.pairId) {
+        throw new Error('Active owner is missing its server-managed pair id.');
+      }
       return {
         audience: 'owner',
         relationship: 'owner',
-        pairId: device.pairId ?? device.deviceId,
-        ownerDeviceId: device.deviceId,
+        pairId: owner.pairId,
+        ownerDeviceId: String(owner._id),
       };
     }
-    if (!device.pairId) {
+    const partner = await this.deviceModel
+      .findOne({
+        _id: device.deviceId,
+        role: DeviceRole.PARTNER,
+        status: DeviceStatus.ACTIVE,
+      })
+      .select('_id pairId pairedOwnerDeviceId')
+      .lean()
+      .exec();
+    if (!partner?.pairId || !partner.pairedOwnerDeviceId) {
       return { audience: 'partner', relationship: 'unpaired' };
     }
     const owner = await this.deviceModel
       .findOne({
-        pairId: device.pairId,
+        _id: partner.pairedOwnerDeviceId,
         role: DeviceRole.OWNER,
         status: DeviceStatus.ACTIVE,
       })
       .select('_id pairId')
       .lean()
       .exec();
-    if (!owner) {
+    if (!owner || owner.pairId !== partner.pairId) {
       return { audience: 'partner', relationship: 'unpaired' };
     }
     return {
       audience: 'partner',
       relationship: 'paired',
-      pairId: device.pairId,
+      pairId: partner.pairId,
       ownerDeviceId: String(owner._id),
     };
   }

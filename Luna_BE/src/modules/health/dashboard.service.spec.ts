@@ -42,6 +42,9 @@ describe('DashboardService', () => {
         ovulationEnabled: true,
       }),
     };
+    devices.findOne.mockReturnValue(
+      query({ _id: owner.deviceId, pairId: 'server-owner-pair' }) as never,
+    );
     service = new DashboardService(
       cycles as unknown as Model<Cycle>,
       logs as unknown as Model<DailyLog>,
@@ -117,9 +120,16 @@ describe('DashboardService', () => {
   it('finds a paired owner by exact pair id and filters partner private log fields', async () => {
     devices.findOne.mockReturnValueOnce(
       query({
+        _id: 'partner-device',
+        pairedOwnerDeviceId: 'paired-owner',
+        pairId: 'server-pair',
+      }) as never,
+    );
+    devices.findOne.mockReturnValueOnce(
+      query({
         _id: 'paired-owner',
         role: DeviceRole.OWNER,
-        pairId: 'pair-1',
+        pairId: 'server-pair',
       }) as never,
     );
     cycles.find.mockReturnValueOnce(
@@ -152,20 +162,27 @@ describe('DashboardService', () => {
       discomfortLevel: 5,
     });
     expect(devices.findOne).toHaveBeenCalledWith({
-      pairId: 'pair-1',
+      _id: 'partner-device',
+      role: DeviceRole.PARTNER,
+      status: DeviceStatus.ACTIVE,
+    });
+    expect(devices.findOne).toHaveBeenLastCalledWith({
+      _id: 'paired-owner',
       role: DeviceRole.OWNER,
       status: DeviceStatus.ACTIVE,
     });
   });
 
-  it('does not infer an owner for an unpaired partner', async () => {
+  it('does not infer an owner when a partner only has a guessed pair id', async () => {
+    devices.findOne.mockReturnValueOnce(
+      query({ _id: 'partner-device', pairId: 'pair-1' }) as never,
+    );
     await expect(
       service.getDashboard(
         {
           ...owner,
           deviceId: 'partner-device',
           role: DeviceRole.PARTNER,
-          pairId: undefined,
         },
         '2026-03-12',
       ),
@@ -175,7 +192,11 @@ describe('DashboardService', () => {
       cycle: null,
       discomfortLevel: null,
     });
-    expect(devices.findOne).not.toHaveBeenCalled();
+    expect(devices.findOne).toHaveBeenCalledWith({
+      _id: 'partner-device',
+      role: DeviceRole.PARTNER,
+      status: DeviceStatus.ACTIVE,
+    });
     expect(cycles.find).not.toHaveBeenCalled();
     expect(logs.findOne).not.toHaveBeenCalled();
   });

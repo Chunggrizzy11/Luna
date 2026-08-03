@@ -1,12 +1,12 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { createHash, randomBytes } from 'crypto';
+import { createHash, randomBytes, randomUUID } from 'crypto';
 import type { Model } from 'mongoose';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { RegisterDeviceDto } from './dto/register-device.dto';
 import { PushTokenDto } from './dto/push-token.dto';
 import { UpdateDeviceDto } from './dto/update-device.dto';
-import { Device, DeviceStatus } from './schemas/device.schema';
+import { Device, DeviceRole, DeviceStatus } from './schemas/device.schema';
 
 export const DEVICE_TOKEN_PEPPER = 'DEVICE_TOKEN_PEPPER';
 
@@ -21,8 +21,11 @@ export class DeviceService {
     dto: RegisterDeviceDto,
   ): Promise<{ deviceId: string; token: string }> {
     const token = randomBytes(32).toString('hex');
+    const registration = { ...dto };
+    delete registration.pairId;
     const device = await this.deviceModel.create({
-      ...dto,
+      ...registration,
+      ...(dto.role === DeviceRole.OWNER ? { pairId: randomUUID() } : {}),
       tokenHash: this.hashToken(token),
       status: DeviceStatus.ACTIVE,
     });
@@ -46,7 +49,6 @@ export class DeviceService {
       deviceId: device.id ?? String(device._id),
       role: device.role,
       status: device.status,
-      pairId: device.pairId,
     };
   }
 

@@ -8,7 +8,6 @@ export interface AuthenticatedDevice {
   deviceId: string;
   role: DeviceRole;
   status: DeviceStatus;
-  pairId?: string;
 }
 
 export interface AuthenticatedRequest extends Request {

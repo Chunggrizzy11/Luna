@@ -51,7 +51,7 @@ export class CareSuggestionService {
       (suggestion) => suggestion.audience === audience.audience,
     );
     const hash = createHash('sha256')
-      .update(`${date}:${audience.pairId}:${audience.audience}`)
+      .update(`${date}${audience.pairId}${audience.audience}`)
       .digest();
     const index = hash.readUInt32BE(0) % candidates.length;
     const suggestion = candidates[index];
