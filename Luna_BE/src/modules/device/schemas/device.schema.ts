@@ -28,6 +28,9 @@ export class Device {
   @Prop({ trim: true, maxlength: 128 })
   deviceName?: string;
 
+  @Prop({ trim: true, maxlength: 128, index: true })
+  pairId?: string;
+
   @Prop({ trim: true, maxlength: 4096 })
   fcmToken?: string;
 }

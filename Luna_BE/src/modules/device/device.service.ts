@@ -46,6 +46,7 @@ export class DeviceService {
       deviceId: device.id ?? String(device._id),
       role: device.role,
       status: device.status,
+      pairId: device.pairId,
     };
   }
 

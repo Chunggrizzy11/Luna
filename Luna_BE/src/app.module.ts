@@ -11,6 +11,7 @@ import { DatabaseModule } from './database/database.module';
 import { DeviceAuthGuard } from './common/guards/device-auth.guard';
 import { DeviceModule } from './modules/device/device.module';
 import { CycleModule } from './modules/cycle/cycle.module';
+import { CalendarModule } from './modules/calendar/calendar.module';
 import { HealthModule } from './modules/health/health.module';
 import { MoodModule } from './modules/mood/mood.module';
 import { NoteModule } from './modules/note/note.module';
@@ -26,6 +27,7 @@ import { SymptomModule } from './modules/symptom/symptom.module';
     DatabaseModule,
     DeviceModule,
     CycleModule,
+    CalendarModule,
     HealthModule,
     MoodModule,
     SymptomModule,

@@ -13,4 +13,9 @@ export class RegisterDeviceDto {
   @IsString()
   @MaxLength(128)
   deviceName?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(128)
+  pairId?: string;
 }
