@@ -1,0 +1,258 @@
+import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { getModelToken } from '@nestjs/mongoose';
+import { Test, type TestingModule } from '@nestjs/testing';
+import { MongoMemoryServer } from 'mongodb-memory-server';
+import type { Model } from 'mongoose';
+import request from 'supertest';
+import type { App } from 'supertest/types';
+import { AppModule } from '../src/app.module';
+import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+import { ApiResponseInterceptor } from '../src/common/interceptors/api-response.interceptor';
+import {
+  Cycle,
+  type CycleDocument,
+} from '../src/modules/cycle/schemas/cycle.schema';
+
+const environmentKeys = [
+  'NODE_ENV',
+  'PORT',
+  'MONGODB_URI',
+  'DEVICE_TOKEN_PEPPER',
+  'ALLOW_INSECURE_HTTP',
+  'TRUST_PROXY',
+  'TRUSTED_PROXY_IPS',
+  'CORS_ORIGINS',
+] as const;
+
+type EnvironmentKey = (typeof environmentKeys)[number];
+type SavedEnvironment = Record<EnvironmentKey, string | undefined>;
+
+function asObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    throw new Error('Expected an object response body.');
+  }
+  return value as Record<string, unknown>;
+}
+
+function token(responseBody: unknown): string {
+  const data = asObject(asObject(responseBody).data);
+  if (typeof data.token !== 'string') throw new Error('Expected device token.');
+  return data.token;
+}
+
+describe('Cycle endpoints (e2e)', () => {
+  let app: INestApplication<App>;
+  let mongo: MongoMemoryServer;
+  let savedEnvironment: SavedEnvironment;
+  let cycleModel: Model<CycleDocument>;
+  let ownerToken: string;
+  let secondOwnerToken: string;
+  let partnerToken: string;
+
+  beforeAll(async () => {
+    savedEnvironment = Object.fromEntries(
+      environmentKeys.map((key) => [key, process.env[key]]),
+    ) as SavedEnvironment;
+    mongo = await MongoMemoryServer.create();
+    Object.assign(process.env, {
+      NODE_ENV: 'test',
+      PORT: '3000',
+      MONGODB_URI: mongo.getUri('luna_cycle_e2e'),
+      DEVICE_TOKEN_PEPPER: 'cycle-e2e-pepper',
+      ALLOW_INSECURE_HTTP: 'true',
+      TRUST_PROXY: 'false',
+      TRUSTED_PROXY_IPS: '',
+      CORS_ORIGINS: 'http://localhost:3000',
+    });
+
+    const module: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = module.createNestApplication();
+    app.setGlobalPrefix('api/v1');
+    app.useGlobalPipes(
+      new ValidationPipe({
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transform: true,
+      }),
+    );
+    app.useGlobalInterceptors(new ApiResponseInterceptor());
+    app.useGlobalFilters(new HttpExceptionFilter());
+    await app.init();
+
+    cycleModel = app.get<Model<CycleDocument>>(getModelToken(Cycle.name));
+    await cycleModel.syncIndexes();
+    const server = app.getHttpServer();
+    ownerToken = token(
+      (
+        await request(server)
+          .post('/api/v1/devices/register')
+          .send({ role: 'owner', platform: 'ios' })
+          .expect(201)
+      ).body as unknown,
+    );
+    secondOwnerToken = token(
+      (
+        await request(server)
+          .post('/api/v1/devices/register')
+          .send({ role: 'owner', platform: 'android' })
+          .expect(201)
+      ).body as unknown,
+    );
+    partnerToken = token(
+      (
+        await request(server)
+          .post('/api/v1/devices/register')
+          .send({ role: 'partner', platform: 'ios' })
+          .expect(201)
+      ).body as unknown,
+    );
+  });
+
+  afterAll(async () => {
+    await app?.close();
+    await mongo?.stop();
+    for (const key of environmentKeys) {
+      const value = savedEnvironment[key];
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  it('returns a nullable global envelope when an owner has no current cycle', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/cycles/current')
+      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .expect(200);
+
+    expect(asObject(response.body as unknown)).toMatchObject({ data: null });
+    expect(typeof asObject(response.body as unknown).timestamp).toBe('string');
+  });
+
+  it('denies a partner every cycle endpoint', async () => {
+    for (const path of [
+      '/api/v1/cycles',
+      '/api/v1/cycles/current',
+      '/api/v1/cycles/prediction?today=2026-03-01',
+    ]) {
+      const response = await request(app.getHttpServer())
+        .get(path)
+        .set('Authorization', `Bearer ${partnerToken}`)
+        .expect(403);
+      expect(asObject(response.body as unknown).code).toBe('FORBIDDEN');
+    }
+    await request(app.getHttpServer())
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${partnerToken}`)
+      .send({ date: '2026-03-01' })
+      .expect(403);
+    await request(app.getHttpServer())
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${partnerToken}`)
+      .send({ date: '2026-03-01' })
+      .expect(403);
+  });
+
+  it('runs an owner lifecycle with envelopes and derives the preceding cycle length', async () => {
+    const server = app.getHttpServer();
+    const start = await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-02-01' })
+      .expect(201);
+    expect(asObject(start.body as unknown).data).toMatchObject({
+      startDate: '2026-02-01',
+      endDate: null,
+      source: 'manual',
+    });
+
+    const sameDayEnd = await request(server)
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-02-01' })
+      .expect(201);
+    expect(asObject(sameDayEnd.body as unknown).data).toMatchObject({
+      endDate: '2026-02-01',
+      periodLength: 1,
+    });
+
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-03-01' })
+      .expect(201);
+
+    const history = await request(server)
+      .get('/api/v1/cycles?from=2026-02-01&to=2026-03-01')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const data = asObject(asObject(history.body as unknown).data);
+    expect(data).toMatchObject({ page: 1, limit: 20 });
+    expect(data.items).toEqual([
+      expect.objectContaining({ startDate: '2026-03-01', endDate: null }),
+      expect.objectContaining({
+        startDate: '2026-02-01',
+        cycleLength: 28,
+        periodLength: 1,
+      }),
+    ]);
+
+    const prediction = await request(server)
+      .get('/api/v1/cycles/prediction?today=2026-03-12')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(asObject(prediction.body as unknown).data).toMatchObject({
+      averageCycleLength: 28,
+      averagePeriodLength: 1,
+      ovulationDate: null,
+      predictedPeriodStart: '2026-03-29',
+    });
+  });
+
+  it('uses the replaceable default settings provider when no history is started', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/cycles/prediction?today=2026-03-12')
+      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .expect(200);
+
+    expect(asObject(response.body as unknown).data).toMatchObject({
+      averageCycleLength: 28,
+      averagePeriodLength: 5,
+      ovulationDate: null,
+      predictedPeriodStart: null,
+    });
+  });
+
+  it('keeps owner histories isolated', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/api/v1/cycles')
+      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .expect(200);
+    expect(asObject(asObject(response.body as unknown).data).items).toEqual([]);
+  });
+
+  it('enforces the active-cycle unique partial index', async () => {
+    const current = await request(app.getHttpServer())
+      .get('/api/v1/devices/me')
+      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .expect(200);
+    const deviceId = String(
+      asObject(asObject(current.body as unknown).data).deviceId,
+    );
+    await cycleModel.create({
+      ownerDeviceId: deviceId,
+      startDate: '2026-04-01',
+      endDate: null,
+      source: 'manual',
+    });
+    await expect(
+      cycleModel.create({
+        ownerDeviceId: deviceId,
+        startDate: '2026-05-01',
+        endDate: null,
+        source: 'manual',
+      }),
+    ).rejects.toMatchObject({ code: 11000 });
+  });
+});

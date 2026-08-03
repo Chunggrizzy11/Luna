@@ -10,6 +10,7 @@ import notificationConfig from './config/notification.config';
 import { DatabaseModule } from './database/database.module';
 import { DeviceAuthGuard } from './common/guards/device-auth.guard';
 import { DeviceModule } from './modules/device/device.module';
+import { CycleModule } from './modules/cycle/cycle.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { DeviceModule } from './modules/device/device.module';
     }),
     DatabaseModule,
     DeviceModule,
+    CycleModule,
   ],
   controllers: [AppController],
   providers: [
