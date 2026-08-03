@@ -13,7 +13,11 @@ function readArguments(argumentsList) {
 
   for (let index = 0; index < argumentsList.length; index += 1) {
     const argument = argumentsList[index];
-    const [option, inlineValue] = argument.split('=', 2);
+    const separatorIndex = argument.indexOf('=');
+    const option =
+      separatorIndex === -1 ? argument : argument.slice(0, separatorIndex);
+    const inlineValue =
+      separatorIndex === -1 ? undefined : argument.slice(separatorIndex + 1);
     const property = optionNames[option];
     if (!property) {
       throw new Error('Unsupported command-line option');

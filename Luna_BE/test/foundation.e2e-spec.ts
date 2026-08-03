@@ -33,6 +33,11 @@ interface MongoUser {
   roles: Array<{ role: string; db: string }>;
 }
 
+const rootUsername = 'foundation-root';
+const rootPassword = 'foundation-root-password';
+const appPassword = 'app-password=only-test';
+const compassPassword = 'compass-password=only-test';
+
 function asObject(value: unknown): Record<string, unknown> {
   if (typeof value !== 'object' || value === null) {
     throw new Error('Expected a JSON object');
@@ -49,6 +54,25 @@ function registrationToken(responseBody: unknown): string {
   }
 
   return data.token;
+}
+
+function authenticatedMongoUri(
+  mongoUri: string,
+  username: string,
+  password: string,
+  database: string,
+): string {
+  const uri = new URL(mongoUri);
+  uri.username = username;
+  uri.password = password;
+  uri.pathname = `/${database}`;
+  uri.searchParams.set('authSource', 'admin');
+  return uri.toString();
+}
+
+async function authenticateMongoUser(mongoUri: string): Promise<void> {
+  const connection = await mongoose.createConnection(mongoUri).asPromise();
+  await connection.close();
 }
 
 async function getUserRoles(
@@ -74,16 +98,49 @@ describe('Luna platform foundation (e2e)', () => {
   let app: INestApplication<App>;
   let mongo: MongoMemoryServer;
   let savedEnvironment: SavedEnvironment;
+  let adminUri: string;
+  let appUri: string;
+  let userBootstrapArgs: string[];
 
   beforeAll(async () => {
     savedEnvironment = Object.fromEntries(
       environmentKeys.map((key) => [key, process.env[key]]),
     ) as SavedEnvironment;
-    mongo = await MongoMemoryServer.create();
+    mongo = await MongoMemoryServer.create({
+      auth: {
+        enable: true,
+        customRootName: rootUsername,
+        customRootPwd: rootPassword,
+      },
+    });
+    adminUri = authenticatedMongoUri(
+      mongo.getUri('admin'),
+      rootUsername,
+      rootPassword,
+      'admin',
+    );
+    adminUri = `${adminUri}&directConnection=true`;
+    appUri = authenticatedMongoUri(
+      mongo.getUri('luna_uat'),
+      'luna_app',
+      appPassword,
+      'luna_uat',
+    );
+    const scriptPath = resolve(__dirname, '../scripts/create-uat-user.js');
+    userBootstrapArgs = [
+      scriptPath,
+      `--mongo-admin-uri=${adminUri}`,
+      `--app-password=${appPassword}`,
+      `--compass-password=${compassPassword}`,
+    ];
+    const initialBootstrap = spawnSync(process.execPath, userBootstrapArgs, {
+      encoding: 'utf8',
+    });
+    expect(initialBootstrap.status).toBe(0);
     Object.assign(process.env, {
       NODE_ENV: 'test',
       PORT: '3000',
-      MONGODB_URI: mongo.getUri('luna_foundation_e2e'),
+      MONGODB_URI: appUri,
       DEVICE_TOKEN_PEPPER: 'foundation-e2e-test-pepper',
       ALLOW_INSECURE_HTTP: 'true',
       TRUST_PROXY: 'false',
@@ -193,36 +250,21 @@ describe('Luna platform foundation (e2e)', () => {
   });
 
   it('creates rerunnable least-privilege UAT database users without logging passwords', async () => {
-    const appPassword = 'app-password-only-test';
-    const compassPassword = 'compass-password-only-test';
-    const scriptPath = resolve(__dirname, '../scripts/create-uat-user.js');
-    const environment = {
-      ...process.env,
-      MONGO_ADMIN_URI: mongo.getUri('admin'),
-      MONGO_APP_PASSWORD: appPassword,
-      MONGO_COMPASS_PASSWORD: compassPassword,
-    };
-
-    const firstRun = spawnSync(process.execPath, [scriptPath], {
+    const secondRun = spawnSync(process.execPath, userBootstrapArgs, {
       encoding: 'utf8',
-      env: environment,
-    });
-    const secondRun = spawnSync(process.execPath, [scriptPath], {
-      encoding: 'utf8',
-      env: environment,
     });
 
-    expect(firstRun.status).toBe(0);
     expect(secondRun.status).toBe(0);
-    expect(`${firstRun.stdout}${firstRun.stderr}`).not.toContain(appPassword);
-    expect(`${firstRun.stdout}${firstRun.stderr}`).not.toContain(
+    expect(`${secondRun.stdout}${secondRun.stderr}`).not.toContain(appPassword);
+    expect(`${secondRun.stdout}${secondRun.stderr}`).not.toContain(
       compassPassword,
     );
-    await expect(
-      getUserRoles(mongo.getUri('admin'), 'luna_app'),
-    ).resolves.toEqual([{ role: 'readWrite', db: 'luna_uat' }]);
-    await expect(
-      getUserRoles(mongo.getUri('admin'), 'luna_compass'),
-    ).resolves.toEqual([{ role: 'read', db: 'luna_uat' }]);
+    await expect(authenticateMongoUser(appUri)).resolves.toBeUndefined();
+    await expect(getUserRoles(adminUri, 'luna_app')).resolves.toEqual([
+      { role: 'readWrite', db: 'luna_uat' },
+    ]);
+    await expect(getUserRoles(adminUri, 'luna_compass')).resolves.toEqual([
+      { role: 'read', db: 'luna_uat' },
+    ]);
   });
 });
