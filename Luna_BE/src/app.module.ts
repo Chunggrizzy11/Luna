@@ -11,6 +11,10 @@ import { DatabaseModule } from './database/database.module';
 import { DeviceAuthGuard } from './common/guards/device-auth.guard';
 import { DeviceModule } from './modules/device/device.module';
 import { CycleModule } from './modules/cycle/cycle.module';
+import { HealthModule } from './modules/health/health.module';
+import { MoodModule } from './modules/mood/mood.module';
+import { NoteModule } from './modules/note/note.module';
+import { SymptomModule } from './modules/symptom/symptom.module';
 
 @Module({
   imports: [
@@ -22,6 +26,10 @@ import { CycleModule } from './modules/cycle/cycle.module';
     DatabaseModule,
     DeviceModule,
     CycleModule,
+    HealthModule,
+    MoodModule,
+    SymptomModule,
+    NoteModule,
   ],
   controllers: [AppController],
   providers: [
