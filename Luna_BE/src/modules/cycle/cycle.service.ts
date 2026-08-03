@@ -71,29 +71,61 @@ export class CycleService {
       .sort({ startDate: -1, _id: -1 })
       .lean()
       .exec();
-    if (previous) {
-      await this.cycleModel
-        .findOneAndUpdate(
-          { _id: previous._id, ownerDeviceId: owner.deviceId },
-          { cycleLength: this.daysBetween(previous.startDate, startDate) },
-        )
-        .exec();
+    const derivedCycleLength = previous
+      ? this.daysBetween(previous.startDate, startDate)
+      : null;
+    if (
+      derivedCycleLength !== null &&
+      (derivedCycleLength < 1 || derivedCycleLength > 365)
+    ) {
+      throw new BadRequestException(
+        'Derived cycle length must be between 1 and 365 days.',
+      );
     }
 
+    let created: Cycle & { _id: unknown };
     try {
-      const created = await this.cycleModel.create({
+      created = (await this.cycleModel.create({
         ownerDeviceId: owner.deviceId,
         startDate,
         endDate: null,
         source: CycleSource.MANUAL,
-      });
-      return this.toResponse(created);
+      })) as Cycle & { _id: unknown };
     } catch (error: unknown) {
       if (this.isDuplicateKeyError(error)) {
         throw new ConflictException('An active cycle already exists.');
       }
       throw error;
     }
+
+    if (previous && derivedCycleLength !== null) {
+      try {
+        const updatedPrevious = await this.cycleModel
+          .findOneAndUpdate(
+            { _id: previous._id, ownerDeviceId: owner.deviceId },
+            { cycleLength: derivedCycleLength },
+            { runValidators: true },
+          )
+          .exec();
+        if (!updatedPrevious) {
+          throw new Error('The previous cycle could not be updated.');
+        }
+      } catch (error: unknown) {
+        // A reservation without its predecessor update is not a valid start.
+        // Preserve the update failure after best-effort removal of only this request's active record.
+        await this.cycleModel
+          .deleteOne({
+            _id: created._id,
+            ownerDeviceId: owner.deviceId,
+            endDate: null,
+          })
+          .exec()
+          .catch(() => undefined);
+        throw error;
+      }
+    }
+
+    return this.toResponse(created);
   }
 
   async end(owner: AuthenticatedDevice, date: string): Promise<CycleResponse> {

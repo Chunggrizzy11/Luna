@@ -45,9 +45,14 @@ describe('Cycle endpoints (e2e)', () => {
   let mongo: MongoMemoryServer;
   let savedEnvironment: SavedEnvironment;
   let cycleModel: Model<CycleDocument>;
-  let ownerToken: string;
-  let secondOwnerToken: string;
-  let partnerToken: string;
+
+  async function registerDevice(role: 'owner' | 'partner'): Promise<string> {
+    const response = await request(app.getHttpServer())
+      .post('/api/v1/devices/register')
+      .send({ role, platform: role === 'owner' ? 'ios' : 'android' })
+      .expect(201);
+    return token(response.body as unknown);
+  }
 
   beforeAll(async () => {
     savedEnvironment = Object.fromEntries(
@@ -83,31 +88,6 @@ describe('Cycle endpoints (e2e)', () => {
 
     cycleModel = app.get<Model<CycleDocument>>(getModelToken(Cycle.name));
     await cycleModel.syncIndexes();
-    const server = app.getHttpServer();
-    ownerToken = token(
-      (
-        await request(server)
-          .post('/api/v1/devices/register')
-          .send({ role: 'owner', platform: 'ios' })
-          .expect(201)
-      ).body as unknown,
-    );
-    secondOwnerToken = token(
-      (
-        await request(server)
-          .post('/api/v1/devices/register')
-          .send({ role: 'owner', platform: 'android' })
-          .expect(201)
-      ).body as unknown,
-    );
-    partnerToken = token(
-      (
-        await request(server)
-          .post('/api/v1/devices/register')
-          .send({ role: 'partner', platform: 'ios' })
-          .expect(201)
-      ).body as unknown,
-    );
   });
 
   afterAll(async () => {
@@ -121,9 +101,10 @@ describe('Cycle endpoints (e2e)', () => {
   });
 
   it('returns a nullable global envelope when an owner has no current cycle', async () => {
+    const ownerToken = await registerDevice('owner');
     const response = await request(app.getHttpServer())
       .get('/api/v1/cycles/current')
-      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     expect(asObject(response.body as unknown)).toMatchObject({ data: null });
@@ -131,6 +112,7 @@ describe('Cycle endpoints (e2e)', () => {
   });
 
   it('denies a partner every cycle endpoint', async () => {
+    const partnerToken = await registerDevice('partner');
     for (const path of [
       '/api/v1/cycles',
       '/api/v1/cycles/current',
@@ -155,6 +137,7 @@ describe('Cycle endpoints (e2e)', () => {
   });
 
   it('runs an owner lifecycle with envelopes and derives the preceding cycle length', async () => {
+    const ownerToken = await registerDevice('owner');
     const server = app.getHttpServer();
     const start = await request(server)
       .post('/api/v1/cycles/start')
@@ -211,9 +194,10 @@ describe('Cycle endpoints (e2e)', () => {
   });
 
   it('uses the replaceable default settings provider when no history is started', async () => {
+    const ownerToken = await registerDevice('owner');
     const response = await request(app.getHttpServer())
       .get('/api/v1/cycles/prediction?today=2026-03-12')
-      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
 
     expect(asObject(response.body as unknown).data).toMatchObject({
@@ -225,6 +209,13 @@ describe('Cycle endpoints (e2e)', () => {
   });
 
   it('keeps owner histories isolated', async () => {
+    const firstOwnerToken = await registerDevice('owner');
+    const secondOwnerToken = await registerDevice('owner');
+    await request(app.getHttpServer())
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${firstOwnerToken}`)
+      .send({ date: '2026-03-01' })
+      .expect(201);
     const response = await request(app.getHttpServer())
       .get('/api/v1/cycles')
       .set('Authorization', `Bearer ${secondOwnerToken}`)
@@ -233,9 +224,10 @@ describe('Cycle endpoints (e2e)', () => {
   });
 
   it('enforces the active-cycle unique partial index', async () => {
+    const ownerToken = await registerDevice('owner');
     const current = await request(app.getHttpServer())
       .get('/api/v1/devices/me')
-      .set('Authorization', `Bearer ${secondOwnerToken}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
       .expect(200);
     const deviceId = String(
       asObject(asObject(current.body as unknown).data).deviceId,
@@ -254,5 +246,47 @@ describe('Cycle endpoints (e2e)', () => {
         source: 'manual',
       }),
     ).rejects.toMatchObject({ code: 11000 });
+  });
+
+  it('preserves the predecessor length of the concurrent winning start only', async () => {
+    const ownerToken = await registerDevice('owner');
+    const server = app.getHttpServer();
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-01-01' })
+      .expect(201);
+    await request(server)
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-01-01' })
+      .expect(201);
+
+    const candidateDates = ['2026-02-01', '2026-03-01'];
+    const responses = await Promise.all(
+      candidateDates.map((date) =>
+        request(server)
+          .post('/api/v1/cycles/start')
+          .set('Authorization', `Bearer ${ownerToken}`)
+          .send({ date }),
+      ),
+    );
+    expect(responses.map((response) => response.status).sort()).toEqual([
+      201, 409,
+    ]);
+    const winningDate = candidateDates.find(
+      (_, index) => responses[index].status === 201,
+    );
+    expect(winningDate).toBeDefined();
+
+    const history = await request(server)
+      .get('/api/v1/cycles')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const items = asObject(asObject(history.body as unknown).data)
+      .items as Array<Record<string, unknown>>;
+    const predecessor = items.find((cycle) => cycle.startDate === '2026-01-01');
+    const expectedLength = winningDate === '2026-02-01' ? 31 : 59;
+    expect(predecessor).toMatchObject({ cycleLength: expectedLength });
   });
 });

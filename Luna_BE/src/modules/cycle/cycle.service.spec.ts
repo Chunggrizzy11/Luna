@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -32,7 +33,10 @@ function query<T>(value: T) {
 
 describe('CycleService', () => {
   let model: jest.Mocked<
-    Pick<Model<Cycle>, 'create' | 'find' | 'findOne' | 'findOneAndUpdate'>
+    Pick<
+      Model<Cycle>,
+      'create' | 'deleteOne' | 'find' | 'findOne' | 'findOneAndUpdate'
+    >
   >;
   let settings: jest.Mocked<CycleSettingsProvider>;
   let service: CycleService;
@@ -40,6 +44,7 @@ describe('CycleService', () => {
   beforeEach(() => {
     model = {
       create: jest.fn(),
+      deleteOne: jest.fn(),
       find: jest.fn(),
       findOne: jest.fn(),
       findOneAndUpdate: jest.fn(),
@@ -116,7 +121,50 @@ describe('CycleService', () => {
     expect(model.findOneAndUpdate).toHaveBeenCalledWith(
       { _id: 'previous', ownerDeviceId: owner.deviceId },
       { cycleLength: 28 },
+      { runValidators: true },
     );
+  });
+
+  it('rejects a derived cycle length beyond the reviewed 365-day bound before reserving an active cycle', async () => {
+    model.findOne.mockReturnValueOnce(query(null) as never);
+    model.findOne.mockReturnValueOnce(
+      query({ _id: 'previous', startDate: '2025-01-01' }) as never,
+    );
+
+    await expect(service.start(owner, '2026-02-01')).rejects.toMatchObject({
+      response: {
+        message: 'Derived cycle length must be between 1 and 365 days.',
+      },
+    } satisfies BadRequestException);
+    expect(model.create).not.toHaveBeenCalled();
+    expect(model.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it('removes only its newly reserved active cycle if the predecessor update fails', async () => {
+    const previous = { _id: 'previous', startDate: '2026-02-01' };
+    const updateFailure = new Error('write failed');
+    model.findOne.mockReturnValueOnce(query(null) as never);
+    model.findOne.mockReturnValueOnce(query(previous) as never);
+    model.create.mockResolvedValue({
+      _id: 'new-cycle',
+      ownerDeviceId: owner.deviceId,
+      startDate: '2026-03-01',
+      endDate: null,
+      source: 'manual',
+    } as never);
+    model.findOneAndUpdate.mockReturnValueOnce({
+      exec: jest.fn().mockRejectedValue(updateFailure),
+    } as never);
+    model.deleteOne.mockReturnValueOnce(query({ acknowledged: true }) as never);
+
+    await expect(service.start(owner, '2026-03-01')).rejects.toBe(
+      updateFailure,
+    );
+    expect(model.deleteOne).toHaveBeenCalledWith({
+      _id: 'new-cycle',
+      ownerDeviceId: owner.deviceId,
+      endDate: null,
+    });
   });
 
   it('ends an active cycle and calculates same-day periods as one day', async () => {
