@@ -1,9 +1,13 @@
+import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/presentation/owner_shell.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
+import '../../features/partner/presentation/partner_pending_page.dart';
 import '../../features/splash/presentation/bootstrap_error_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
+import '../../shared/entities/device_identity.dart';
+import '../../shared/enums/device_role.dart';
 import '../config/app_config.dart';
 import '../config/app_identity_state.dart';
 import 'app_routes.dart';
@@ -39,12 +43,19 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.home,
-            builder: (context, state) => const OwnerShell(),
+            builder: (context, state) =>
+                homeForIdentity(config.identityState.identity),
           ),
         ],
       );
 
   final GoRouter router;
+
+  static Widget homeForIdentity(DeviceIdentity? identity) =>
+      switch (identity?.role) {
+        DeviceRole.owner => const OwnerShell(),
+        DeviceRole.partner || null => const PartnerPendingPage(),
+      };
 
   static String? redirectPath({
     required AppIdentityStatus status,

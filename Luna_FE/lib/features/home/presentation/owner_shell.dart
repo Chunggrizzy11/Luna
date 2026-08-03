@@ -26,7 +26,7 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
   Widget build(BuildContext context) {
     final pages = [
       HomePage(
-        onOpenDailyLog: () => _openLog(ref.read(nowProvider)),
+        onOpenDailyLog: () => _openLog(ref.read(clockProvider)()),
         onOpenCycle: () => setState(() => _index = 3),
       ),
       CycleCalendarPage(onDayTap: _openLog),
@@ -75,6 +75,7 @@ class _DailyLogLoader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final key = ApiDate.date(date);
+    final mutation = ref.watch(dailyLogControllerProvider);
     return ref
         .watch(dailyLogForDateProvider(key))
         .when(
@@ -94,6 +95,7 @@ class _DailyLogLoader extends ConsumerWidget {
           data: (log) => DailyLogSheet(
             date: date,
             initial: log,
+            errorMessage: _mutationFeedback(mutation),
             onSave: (mood, symptoms, discomfort, note) async {
               await ref
                   .read(dailyLogControllerProvider.notifier)
@@ -117,4 +119,19 @@ class _DailyLogLoader extends ConsumerWidget {
           ),
         );
   }
+}
+
+String? _mutationFeedback(AsyncValue<void> state) {
+  if (!state.hasError) return null;
+  final error = state.error;
+  if (error is UnauthorizedFailure) {
+    return '${error.message} Vui lòng đăng ký lại thiết bị để tiếp tục.';
+  }
+  if (error is NetworkFailure) {
+    return '${error.message} Không thể lưu đầy đủ. Một số dữ liệu có thể đã được lưu.';
+  }
+  if (error is Failure) {
+    return '${error.message} Một số dữ liệu có thể đã được lưu.';
+  }
+  return 'Không thể lưu đầy đủ. Một số dữ liệu có thể đã được lưu.';
 }

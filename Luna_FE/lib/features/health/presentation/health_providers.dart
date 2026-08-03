@@ -13,11 +13,15 @@ import '../../symptom/data/symptom_repository.dart';
 import '../data/health_repository.dart';
 import '../domain/health_models.dart';
 import 'daily_log_controller.dart';
+import 'local_day_controller.dart';
 
 final apiClientProvider = Provider<ApiClient>(
   (ref) => throw StateError('apiClientProvider must be overridden at root'),
 );
-final nowProvider = Provider<DateTime>((ref) => DateTime.now());
+final clockProvider = Provider<Clock>((ref) => DateTime.now);
+final localDayProvider = StateNotifierProvider<LocalDayController, DateTime>(
+  (ref) => LocalDayController(clock: ref.watch(clockProvider)),
+);
 
 final healthRepositoryProvider = Provider<HealthRepository>(
   (ref) => HealthRepository(ref.watch(apiClientProvider)),
@@ -39,12 +43,14 @@ final noteRepositoryProvider = Provider<NoteRepository>(
 );
 
 final dashboardProvider = FutureProvider.autoDispose<OwnerDashboard>(
-  (ref) =>
-      ref.watch(healthRepositoryProvider).dashboard(ref.watch(nowProvider)),
+  (ref) => ref
+      .watch(healthRepositoryProvider)
+      .dashboard(ref.watch(localDayProvider)),
 );
-final careTodayProvider = FutureProvider.autoDispose<CareSuggestion?>(
-  (ref) => ref.watch(healthRepositoryProvider).careToday(),
-);
+final careTodayProvider = FutureProvider.autoDispose<CareSuggestion?>((ref) {
+  ref.watch(localDayProvider);
+  return ref.watch(healthRepositoryProvider).careToday();
+});
 final journalProvider = FutureProvider.autoDispose<List<JournalEntry>>(
   (ref) => ref.watch(healthRepositoryProvider).journal(),
 );
@@ -83,9 +89,7 @@ void invalidateOwnerData(Ref ref) {
 }
 
 final dailyLogControllerProvider =
-    StateNotifierProvider.autoDispose<DailyLogController, AsyncValue<void>>((
-      ref,
-    ) {
+    StateNotifierProvider<DailyLogController, AsyncValue<void>>((ref) {
       final moods = ref.watch(moodRepositoryProvider);
       final symptoms = ref.watch(symptomRepositoryProvider);
       final notes = ref.watch(noteRepositoryProvider);

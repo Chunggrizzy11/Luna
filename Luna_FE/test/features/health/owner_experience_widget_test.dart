@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:luna_fe/core/error/failure.dart';
+import 'package:luna_fe/core/widgets/app_button.dart';
 import 'package:luna_fe/features/calendar/domain/cycle_calendar.dart';
 import 'package:luna_fe/features/calendar/presentation/cycle_calendar_page.dart';
 import 'package:luna_fe/features/cycle/domain/cycle.dart';
@@ -24,7 +26,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          nowProvider.overrideWithValue(DateTime(2026, 8, 3)),
+          clockProvider.overrideWithValue(() => DateTime(2026, 8, 3)),
           currentCycleProvider.overrideWith((ref) async => null),
           cycleControllerProvider.overrideWith(
             (ref) => CycleController(
@@ -54,7 +56,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          nowProvider.overrideWithValue(DateTime(2026, 8, 5)),
+          clockProvider.overrideWithValue(() => DateTime(2026, 8, 5)),
           currentCycleProvider.overrideWith(
             (ref) async => Cycle(startDate: DateTime(2026, 8, 1)),
           ),
@@ -155,6 +157,57 @@ void main() {
     await tester.tap(find.text('Xóa'));
     await tester.pumpAndSettle();
     expect(deleted, isTrue);
+  });
+
+  testWidgets('daily log displays the selected historical date', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DailyLogSheet(
+            date: DateTime(2026, 7, 20),
+            initial: const DailyLog(),
+            onSave: (_, _, _, _) async {},
+            onDeleteNote: () async {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Nhật ký ngày 20/07/2026'), findsOneWidget);
+    expect(find.text('Nhật ký hôm nay'), findsNothing);
+  });
+
+  testWidgets('save failure stops loading and renders typed feedback', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: DailyLogSheet(
+            date: DateTime(2026, 8, 3),
+            initial: const DailyLog(),
+            errorMessage:
+                'Không thể kết nối mạng. Một số dữ liệu có thể đã được lưu.',
+            onSave: (_, _, _, _) async => throw const NetworkFailure(),
+            onDeleteNote: () async {},
+          ),
+        ),
+      ),
+    );
+
+    await tester.ensureVisible(find.text('Lưu nhật ký'));
+    await tester.tap(find.text('Lưu nhật ký'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Một số dữ liệu'), findsOneWidget);
+    final button = tester.widget<AppButton>(
+      find.ancestor(
+        of: find.text('Lưu nhật ký'),
+        matching: find.byType(AppButton),
+      ),
+    );
+    expect(button.isLoading, isFalse);
   });
 
   testWidgets('health journal renders newest-first timeline content', (

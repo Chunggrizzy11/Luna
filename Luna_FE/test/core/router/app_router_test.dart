@@ -2,6 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:luna_fe/core/config/app_identity_state.dart';
 import 'package:luna_fe/core/router/app_router.dart';
 import 'package:luna_fe/core/router/app_routes.dart';
+import 'package:luna_fe/features/home/presentation/owner_shell.dart';
+import 'package:luna_fe/features/partner/presentation/partner_pending_page.dart';
+import 'package:luna_fe/shared/enums/device_role.dart';
+import 'package:luna_fe/shared/entities/device_identity.dart';
 
 void main() {
   test('redirects a device without secure identity to onboarding', () {
@@ -59,5 +63,20 @@ void main() {
       ),
       isNull,
     );
+  });
+
+  test('home destination is selected from the persisted device identity', () {
+    const owner = DeviceIdentity(
+      deviceId: 'owner',
+      token: 'secret',
+      role: DeviceRole.owner,
+    );
+    const partner = DeviceIdentity(
+      deviceId: 'partner',
+      token: 'secret',
+      role: DeviceRole.partner,
+    );
+    expect(AppRouter.homeForIdentity(owner), isA<OwnerShell>());
+    expect(AppRouter.homeForIdentity(partner), isA<PartnerPendingPage>());
   });
 }

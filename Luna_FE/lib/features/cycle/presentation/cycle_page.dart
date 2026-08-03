@@ -92,7 +92,8 @@ class CyclePage extends ConsumerWidget {
           : 'Luna sẽ dùng hôm nay làm ngày kết thúc.',
     );
     if (!confirmed) return;
-    final date = ref.read(nowProvider);
+    if (!context.mounted) return;
+    final date = ref.read(clockProvider)();
     final controller = ref.read(cycleControllerProvider.notifier);
     if (start) {
       await controller.start(date);

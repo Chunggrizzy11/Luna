@@ -46,9 +46,13 @@ class DailyLogController extends StateNotifier<AsyncValue<void>> {
 
   Future<void> _mutate(Future<void> Function() action) async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(() async {
+    try {
       await action();
+      state = const AsyncData(null);
+    } catch (error, stackTrace) {
+      state = AsyncError(error, stackTrace);
+    } finally {
       onInvalidate();
-    });
+    }
   }
 }

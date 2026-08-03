@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_button.dart';
@@ -21,12 +22,14 @@ class DailyLogSheet extends StatefulWidget {
     required this.initial,
     required this.onSave,
     required this.onDeleteNote,
+    this.errorMessage,
     super.key,
   });
   final DateTime date;
   final DailyLog initial;
   final SaveDailyLog onSave;
   final Future<void> Function() onDeleteNote;
+  final String? errorMessage;
 
   @override
   State<DailyLogSheet> createState() => _DailyLogSheetState();
@@ -54,7 +57,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Nhật ký hôm nay',
+          'Nhật ký ngày ${DateFormat('dd/MM/yyyy').format(widget.date)}',
           style: Theme.of(context).textTheme.headlineSmall,
         ),
         const SizedBox(height: AppSpacing.md),
@@ -115,6 +118,16 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
           maxLines: 4,
           decoration: const InputDecoration(labelText: 'Ghi chú sức khỏe'),
         ),
+        if (widget.errorMessage != null) ...[
+          const SizedBox(height: AppSpacing.xs),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              widget.errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
         if (widget.initial.note != null)
           Align(
             alignment: Alignment.centerRight,
@@ -131,8 +144,13 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    await widget.onSave(_mood, _symptoms, _discomfort.round(), _note.text);
-    if (mounted) setState(() => _saving = false);
+    try {
+      await widget.onSave(_mood, _symptoms, _discomfort.round(), _note.text);
+    } catch (_) {
+      // The parent renders typed mutation feedback while this sheet resets.
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _delete() async {
