@@ -88,3 +88,42 @@ Executed from `Luna_FE` after all review fixes:
 - Confirmed the partner destination contains no owner repository/provider references and the actual router builder consumes `identityState.identity` rather than a caller-supplied role.
 - No new package dependency or credential-handling path was introduced.
 - Platform builds remain outside the requested verification set; physical-device layout/rollover QA remains a release acceptance concern.
+
+## Review Fix Round 2/5
+
+### Delivered
+
+- Updated every daily-log mutation failure message, including unauthorized failures, to warn that some data may already have persisted; unauthorized feedback also retains the device re-registration guidance.
+- Added feedback-session generation tracking to the application-lived daily-log controller. Opening or closing a sheet resets feedback, and a delayed completion from an earlier sheet can no longer overwrite the active sheet's state; projection invalidation still runs for every completion.
+- Strengthened repository contracts to reject incorrect methods and assert the exact GET/POST/PUT/DELETE sequence for cycle, calendar, mood, symptom, note, dashboard, care, and journal requests.
+- Added explicit general server-failure controller and widget coverage in addition to offline and unauthorized paths.
+- Added startup widget tests that persist real owner and partner `DeviceIdentity` values in the secure-storage service, initialize the actual app configuration, and exercise the actual router destination builders.
+
+### TDD evidence
+
+- `flutter test test/features/health/owner_states_widget_test.dart test/features/health/health_controllers_test.dart`
+  - RED: unauthorized feedback omitted the partial-save warning, a day-A failure remained visible after opening day B, and the new-session race test failed because no feedback-session API existed.
+  - GREEN: 17/17 tests pass, including stale-state reset, delayed current-sheet save, prior-sheet completion isolation, typed general failure, and partial-save messaging.
+- `flutter test test/features/health/owner_repositories_contract_test.dart`
+  - GREEN: 4/4 contract groups enforce exact endpoint verbs, paths, queries, payloads, and envelopes.
+- `flutter test test/core/router/persisted_role_routing_widget_test.dart`
+  - GREEN: 2/2 actual secure-storage bootstrap/router tests select the safe partner destination and the owner shell from persisted identity.
+- `flutter test test/features/health/health_controllers_test.dart test/features/health/owner_states_widget_test.dart test/features/health/owner_repositories_contract_test.dart test/core/router/persisted_role_routing_widget_test.dart`
+  - GREEN: all 23 focused round-2 regression tests pass together.
+
+### Final verification
+
+Executed from `Luna_FE` after the finished changes:
+
+- `dart format lib test` -> `Formatted 100 files (0 changed)`.
+- `flutter analyze` -> `No issues found!`.
+- `flutter test` -> `All tests passed!`, 77 tests, exit 0.
+- `git diff --check` -> no whitespace errors; only the repository's LF-to-CRLF checkout warnings were emitted.
+
+### Self-review and concerns
+
+- Confirmed session cleanup is in `try/finally`, does not depend on widget disposal, and stale asynchronous completions cannot publish success or error into a later sheet while invalidation remains unconditional.
+- Confirmed persisted-role tests use the real initializer, storage serialization, identity state, router redirect, and route builder rather than calling a role helper in isolation.
+- Confirmed contract harnesses fail closed on unsupported verbs and the non-network/non-401 failure remains typed through controller and UI layers.
+- Daily-log save still consists of three independent backend requests, so atomicity cannot be guaranteed client-side; the UI now consistently communicates that partial persistence is possible.
+- Platform builds and physical-device QA remain outside the requested verification set.

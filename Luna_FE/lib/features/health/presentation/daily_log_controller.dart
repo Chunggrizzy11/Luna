@@ -28,6 +28,8 @@ class DailyLogController extends StateNotifier<AsyncValue<void>> {
   final DeleteNote onDeleteNote;
   final void Function() onInvalidate;
 
+  int _feedbackSession = 0;
+
   Future<void> save({
     required DateTime date,
     required Mood mood,
@@ -44,13 +46,28 @@ class DailyLogController extends StateNotifier<AsyncValue<void>> {
 
   Future<void> deleteNote(DateTime date) => _mutate(() => onDeleteNote(date));
 
+  void startFeedbackSession() {
+    _feedbackSession += 1;
+    state = const AsyncData(null);
+  }
+
+  void endFeedbackSession() {
+    _feedbackSession += 1;
+    state = const AsyncData(null);
+  }
+
   Future<void> _mutate(Future<void> Function() action) async {
+    final feedbackSession = _feedbackSession;
     state = const AsyncLoading();
     try {
       await action();
-      state = const AsyncData(null);
+      if (feedbackSession == _feedbackSession) {
+        state = const AsyncData(null);
+      }
     } catch (error, stackTrace) {
-      state = AsyncError(error, stackTrace);
+      if (feedbackSession == _feedbackSession) {
+        state = AsyncError(error, stackTrace);
+      }
     } finally {
       onInvalidate();
     }

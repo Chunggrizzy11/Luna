@@ -47,6 +47,11 @@ void main() {
         '/cycles/start',
         '/cycles/end',
       ]);
+      expect(harness.requests.map((value) => value.method), [
+        'GET',
+        'POST',
+        'POST',
+      ]);
       expect(harness.requests[1].data, {'date': '2026-08-03'});
       expect(harness.requests[2].data, {'date': '2026-08-05'});
     },
@@ -56,18 +61,21 @@ void main() {
     'calendar repository sends yyyy-MM and decodes all day states',
     () async {
       final harness = _Harness(
-        (_) => _envelope({
-          'month': '2026-08',
-          'days': [
-            {
-              'date': '2026-08-03',
-              'status': 'observed-period',
-              'isObservedPeriod': true,
-              'isPredictedPeriod': false,
-              'isOvulation': false,
-            },
-          ],
-        }),
+        (request) => switch ((request.method, request.path)) {
+          ('GET', '/calendar') => _envelope({
+            'month': '2026-08',
+            'days': [
+              {
+                'date': '2026-08-03',
+                'status': 'observed-period',
+                'isObservedPeriod': true,
+                'isPredictedPeriod': false,
+                'isOvulation': false,
+              },
+            ],
+          }),
+          _ => throw StateError('${request.method} ${request.path}'),
+        },
       );
 
       final result = await CalendarRepository(
@@ -75,6 +83,7 @@ void main() {
       ).month(DateTime(2026, 8));
 
       expect(harness.requests.single.path, '/calendar');
+      expect(harness.requests.single.method, 'GET');
       expect(harness.requests.single.queryParameters, {'month': '2026-08'});
       expect(result.days.single.status, CalendarDayStatus.observedPeriod);
     },
@@ -86,12 +95,18 @@ void main() {
       final harness = _Harness((request) {
         final date = request.path.split('/').last;
         if (request.path.startsWith('/moods/')) {
+          if (request.method != 'GET' && request.method != 'PUT') {
+            throw StateError('${request.method} ${request.path}');
+          }
           return _envelope({
             'date': date,
             'mood': request.method == 'GET' ? null : 'happy',
           });
         }
         if (request.path.startsWith('/symptoms/')) {
+          if (request.method != 'GET' && request.method != 'PUT') {
+            throw StateError('${request.method} ${request.path}');
+          }
           return _envelope({
             'date': date,
             'symptoms': request.method == 'GET' ? [] : ['cramps', 'headache'],
@@ -99,6 +114,9 @@ void main() {
           });
         }
         if (request.path.startsWith('/notes/')) {
+          if (!const {'GET', 'PUT', 'DELETE'}.contains(request.method)) {
+            throw StateError('${request.method} ${request.path}');
+          }
           return _envelope({
             'date': date,
             'note': request.method == 'DELETE'
@@ -134,6 +152,20 @@ void main() {
       });
       expect(harness.requests[5].data, {'note': 'Đã sửa'});
       expect(harness.requests[6].method, 'DELETE');
+      expect(harness.requests.map((value) => value.method), [
+        'GET',
+        'PUT',
+        'GET',
+        'PUT',
+        'GET',
+        'PUT',
+        'DELETE',
+      ]);
+      expect(harness.requests.map((value) => value.path).toSet(), {
+        '/moods/2026-08-03',
+        '/symptoms/2026-08-03',
+        '/notes/2026-08-03',
+      });
     },
   );
 
@@ -141,8 +173,8 @@ void main() {
     'health repository decodes dashboard care and paginated journal envelopes',
     () async {
       final harness = _Harness(
-        (request) => switch (request.path) {
-          '/health/dashboard' => _envelope({
+        (request) => switch ((request.method, request.path)) {
+          ('GET', '/health/dashboard') => _envelope({
             'date': '2026-08-03',
             'relationship': 'owner',
             'cycle': {
@@ -163,7 +195,7 @@ void main() {
               'note': null,
             },
           }),
-          '/health/care/today' => _envelope({
+          ('GET', '/health/care/today') => _envelope({
             'date': '2026-08-03',
             'relationship': 'owner',
             'suggestion': {
@@ -172,14 +204,14 @@ void main() {
               'description': 'Nhấp từng ngụm nhỏ.',
             },
           }),
-          '/health/journal' => _envelope({
+          ('GET', '/health/journal') => _envelope({
             'items': [
               {'date': '2026-08-03', 'mood': 'happy'},
             ],
             'page': 1,
             'limit': 20,
           }),
-          _ => throw StateError(request.path),
+          _ => throw StateError('${request.method} ${request.path}'),
         },
       );
       final repository = HealthRepository(harness.api);
@@ -193,6 +225,11 @@ void main() {
       expect(journal.single.mood, Mood.happy);
       expect(harness.requests.first.queryParameters, {'date': '2026-08-03'});
       expect(harness.requests.last.queryParameters, {'page': 1, 'limit': 20});
+      expect(harness.requests.map((value) => value.method), [
+        'GET',
+        'GET',
+        'GET',
+      ]);
     },
   );
 }

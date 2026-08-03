@@ -72,6 +72,35 @@ void main() {
   );
 
   test(
+    'a new feedback session ignores completion from the prior sheet',
+    () async {
+      final pending = Completer<void>();
+      var invalidations = 0;
+      final controller = DailyLogController(
+        onUpdateMood: (date, mood) => pending.future,
+        onUpdateSymptoms: (date, symptoms, discomfort) async {},
+        onUpdateNote: (date, note) async {},
+        onDeleteNote: (date) async {},
+        onInvalidate: () => invalidations++,
+      );
+
+      final oldMutation = controller.save(
+        date: DateTime(2026, 8, 3),
+        mood: Mood.sad,
+        symptoms: const {},
+        discomfortLevel: 1,
+        note: '',
+      );
+      controller.startFeedbackSession();
+      pending.completeError(const ServerFailure('Lỗi sheet cũ'));
+      await oldMutation;
+
+      expect(controller.state, isA<AsyncData<void>>());
+      expect(invalidations, 1);
+    },
+  );
+
+  test(
     'partial daily log failure still invalidates every projection',
     () async {
       var moodSaved = false;
@@ -114,6 +143,27 @@ void main() {
       expect(controller.state.error, isA<NetworkFailure>());
     },
   );
+
+  test('daily log controller preserves a general server failure', () async {
+    final controller = DailyLogController(
+      onUpdateMood: (date, mood) async =>
+          throw const ServerFailure('Máy chủ lỗi'),
+      onUpdateSymptoms: (date, symptoms, discomfort) async {},
+      onUpdateNote: (date, note) async {},
+      onDeleteNote: (date) async {},
+      onInvalidate: () {},
+    );
+
+    await controller.save(
+      date: DateTime(2026, 8, 3),
+      mood: Mood.neutral,
+      symptoms: const {},
+      discomfortLevel: 0,
+      note: '',
+    );
+
+    expect(controller.state.error, isA<ServerFailure>());
+  });
 
   test(
     'daily log mutations invalidate dashboard calendar and journal',

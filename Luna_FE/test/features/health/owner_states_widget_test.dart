@@ -9,6 +9,7 @@ import 'package:luna_fe/features/calendar/domain/cycle_calendar.dart';
 import 'package:luna_fe/features/cycle/presentation/cycle_controller.dart';
 import 'package:luna_fe/features/health/domain/health_models.dart';
 import 'package:luna_fe/features/health/presentation/daily_log_controller.dart';
+import 'package:luna_fe/features/health/presentation/daily_log_sheet.dart';
 import 'package:luna_fe/features/health/presentation/health_journal_page.dart';
 import 'package:luna_fe/features/health/presentation/health_providers.dart';
 import 'package:luna_fe/features/home/presentation/owner_shell.dart';
@@ -36,6 +37,7 @@ void main() {
   for (final failure in <Failure>[
     const NetworkFailure('Không thể kết nối mạng.'),
     const UnauthorizedFailure('Phiên thiết bị không hợp lệ.'),
+    const ServerFailure('Máy chủ tạm thời không phản hồi.'),
   ]) {
     testWidgets('journal renders ${failure.runtimeType} feedback', (
       tester,
@@ -83,6 +85,7 @@ void main() {
   for (final failure in <Failure>[
     const NetworkFailure('Không thể kết nối mạng.'),
     const UnauthorizedFailure('Phiên thiết bị không hợp lệ.'),
+    const ServerFailure('Máy chủ tạm thời không phản hồi.'),
   ]) {
     testWidgets('daily log observes ${failure.runtimeType} without closing', (
       tester,
@@ -112,24 +115,81 @@ void main() {
       expect(find.text('Lưu nhật ký'), findsOneWidget);
       if (failure is UnauthorizedFailure) {
         expect(find.textContaining('đăng ký lại thiết bị'), findsOneWidget);
-      } else {
-        expect(
-          find.textContaining('Một số dữ liệu có thể đã được lưu'),
-          findsOneWidget,
-        );
       }
+      expect(
+        find.textContaining('Một số dữ liệu có thể đã được lưu'),
+        findsOneWidget,
+      );
     });
   }
+
+  testWidgets(
+    'new date clears stale failure while a later delayed save remains safe',
+    (tester) async {
+      var now = DateTime(2026, 8, 3, 10);
+      var attempts = 0;
+      final delayed = Completer<void>();
+      final controller = DailyLogController(
+        onUpdateMood: (date, mood) {
+          attempts += 1;
+          if (attempts == 1) {
+            throw const ServerFailure('Lỗi ngày A');
+          }
+          return delayed.future;
+        },
+        onUpdateSymptoms: (date, symptoms, discomfort) async {},
+        onUpdateNote: (date, note) async {},
+        onDeleteNote: (date) async {},
+        onInvalidate: () {},
+      );
+      await _pumpOwner(
+        tester,
+        clock: () => now,
+        extraOverrides: [
+          dailyLogControllerProvider.overrideWith((ref) => controller),
+          dailyLogForDateProvider.overrideWith(
+            (ref, date) async => const DailyLog(),
+          ),
+        ],
+      );
+
+      await tester.tap(find.text('Ghi hôm nay'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Lưu nhật ký'));
+      await tester.tap(find.text('Lưu nhật ký'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('Lỗi ngày A'), findsOneWidget);
+
+      Navigator.of(tester.element(find.byType(DailyLogSheet))).pop();
+      await tester.pumpAndSettle();
+      now = DateTime(2026, 8, 4, 10);
+      await tester.tap(find.text('Ghi hôm nay'));
+      await tester.pumpAndSettle();
+      expect(find.text('Nhật ký ngày 04/08/2026'), findsOneWidget);
+      expect(find.textContaining('Lỗi ngày A'), findsNothing);
+
+      await tester.ensureVisible(find.text('Lưu nhật ký'));
+      await tester.tap(find.text('Lưu nhật ký'));
+      await tester.pump();
+      expect(controller.state.isLoading, isTrue);
+      delayed.complete();
+      await tester.pumpAndSettle();
+      expect(find.byType(DailyLogSheet), findsNothing);
+    },
+  );
 }
 
 Future<void> _pumpOwner(
   WidgetTester tester, {
+  DateTime Function()? clock,
   List<Override> extraOverrides = const [],
 }) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        clockProvider.overrideWithValue(() => DateTime(2026, 8, 3, 10)),
+        clockProvider.overrideWithValue(
+          clock ?? () => DateTime(2026, 8, 3, 10),
+        ),
         dashboardProvider.overrideWith((ref) async => _dashboard),
         careTodayProvider.overrideWith((ref) async => null),
         journalProvider.overrideWith((ref) async => []),

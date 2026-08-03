@@ -64,8 +64,18 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
     );
   }
 
-  Future<void> _openLog(DateTime date) =>
-      AppBottomSheet.show<void>(context, child: _DailyLogLoader(date: date));
+  Future<void> _openLog(DateTime date) async {
+    final controller = ref.read(dailyLogControllerProvider.notifier);
+    controller.startFeedbackSession();
+    try {
+      await AppBottomSheet.show<void>(
+        context,
+        child: _DailyLogLoader(date: date),
+      );
+    } finally {
+      controller.endFeedbackSession();
+    }
+  }
 }
 
 class _DailyLogLoader extends ConsumerWidget {
@@ -125,7 +135,8 @@ String? _mutationFeedback(AsyncValue<void> state) {
   if (!state.hasError) return null;
   final error = state.error;
   if (error is UnauthorizedFailure) {
-    return '${error.message} Vui lòng đăng ký lại thiết bị để tiếp tục.';
+    return '${error.message} Một số dữ liệu có thể đã được lưu. '
+        'Vui lòng đăng ký lại thiết bị để tiếp tục.';
   }
   if (error is NetworkFailure) {
     return '${error.message} Không thể lưu đầy đủ. Một số dữ liệu có thể đã được lưu.';
