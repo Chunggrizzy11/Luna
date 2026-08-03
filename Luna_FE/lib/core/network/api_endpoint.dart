@@ -1,6 +1,18 @@
 abstract final class ApiEndpoint {
   static const registerDevice = '/devices/register';
   static const currentDevice = '/devices/me';
+  static const cycles = '/cycles';
+  static const currentCycle = '/cycles/current';
+  static const startCycle = '/cycles/start';
+  static const endCycle = '/cycles/end';
+  static const calendar = '/calendar';
+  static const dashboard = '/health/dashboard';
+  static const careToday = '/health/care/today';
+  static const journal = '/health/journal';
+
+  static String mood(String date) => '/moods/$date';
+  static String symptoms(String date) => '/symptoms/$date';
+  static String note(String date) => '/notes/$date';
 
   static const publicPaths = <String>{registerDevice};
 }

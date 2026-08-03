@@ -131,6 +131,36 @@ void main() {
   });
 
   test(
+    'put and delete decode global envelopes with the intended verbs',
+    () async {
+      final requests = <RequestOptions>[];
+      final dio = Dio()
+        ..httpClientAdapter = _StubAdapter((options) {
+          requests.add(options);
+          return _jsonResponse({
+            'data': {
+              'date': '2026-08-03',
+              'note': options.method == 'DELETE' ? null : 'Đã sửa',
+            },
+          });
+        });
+      final api = ApiClient(dio);
+
+      await api.put<Map<String, dynamic>>(
+        '/notes/2026-08-03',
+        data: {'note': 'Đã sửa'},
+        decode: (value) => value! as Map<String, dynamic>,
+      );
+      await api.delete<Map<String, dynamic>>(
+        '/notes/2026-08-03',
+        decode: (value) => value! as Map<String, dynamic>,
+      );
+
+      expect(requests.map((request) => request.method), ['PUT', 'DELETE']);
+    },
+  );
+
+  test(
     'malformed registration credentials surface as typed failures',
     () async {
       final dioClient = DioClient(

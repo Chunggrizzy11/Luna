@@ -1,6 +1,6 @@
 import 'package:go_router/go_router.dart';
 
-import '../../features/onboarding/presentation/onboarding_complete_page.dart';
+import '../../features/home/presentation/owner_shell.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/splash/presentation/bootstrap_error_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
@@ -39,8 +39,7 @@ class AppRouter {
           ),
           GoRoute(
             path: AppRoutes.home,
-            builder: (context, state) =>
-                OnboardingCompletePage(identityState: config.identityState),
+            builder: (context, state) => const OwnerShell(),
           ),
         ],
       );

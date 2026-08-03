@@ -41,6 +41,35 @@ class ApiClient {
     }
   }
 
+  Future<ApiResponse<T>> put<T>(
+    String path, {
+    Object? data,
+    required T Function(Object? value) decode,
+  }) async {
+    try {
+      final response = await _dio.put<Map<String, dynamic>>(path, data: data);
+      return _decode(response.data, decode);
+    } catch (error) {
+      throw ErrorMapper.map(error);
+    }
+  }
+
+  Future<ApiResponse<T>> delete<T>(
+    String path, {
+    Object? data,
+    required T Function(Object? value) decode,
+  }) async {
+    try {
+      final response = await _dio.delete<Map<String, dynamic>>(
+        path,
+        data: data,
+      );
+      return _decode(response.data, decode);
+    } catch (error) {
+      throw ErrorMapper.map(error);
+    }
+  }
+
   ApiResponse<T> _decode<T>(
     Map<String, dynamic>? body,
     T Function(Object? value) decode,
