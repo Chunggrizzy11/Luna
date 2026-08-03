@@ -33,7 +33,8 @@ async function bootstrap() {
   app.use(compression());
   app.use(
     createTransportSecurityMiddleware({
-      nodeEnvironment: configService.getOrThrow<NodeEnvironment>('app.NODE_ENV'),
+      nodeEnvironment:
+        configService.getOrThrow<NodeEnvironment>('app.NODE_ENV'),
       allowInsecureHttp: configService.getOrThrow<boolean>(
         'app.ALLOW_INSECURE_HTTP',
       ),
@@ -77,4 +78,4 @@ async function bootstrap() {
 
   await app.listen(configService.getOrThrow<number>('app.PORT'));
 }
-bootstrap();
+void bootstrap();

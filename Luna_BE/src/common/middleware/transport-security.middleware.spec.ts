@@ -1,10 +1,19 @@
 import type { Request, Response } from 'express';
+import { HttpException } from '@nestjs/common';
 import {
   createTransportSecurityMiddleware,
   createTrustedProxyTrust,
 } from './transport-security.middleware';
 
 describe('createTransportSecurityMiddleware', () => {
+  const errorStatus = (error: unknown): number => {
+    if (!(error instanceof HttpException)) {
+      throw new Error('Expected an HTTP exception');
+    }
+
+    return error.getStatus();
+  };
+
   const createRequest = (options?: {
     encrypted?: boolean;
     forwardedProtocol?: string;
@@ -27,7 +36,10 @@ describe('createTransportSecurityMiddleware', () => {
   const createResponse = () => ({}) as Response;
 
   it('rejects production plaintext and ignores spoofed forwarded headers without proxy trust', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
@@ -40,12 +52,14 @@ describe('createTransportSecurityMiddleware', () => {
       next,
     );
 
-    expect(next).toHaveBeenCalledTimes(1);
-    expect(next.mock.calls[0][0].getStatus()).toBe(426);
+    expect(errorStatus(receivedError)).toBe(426);
   });
 
   it('permits production direct TLS', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
@@ -54,11 +68,14 @@ describe('createTransportSecurityMiddleware', () => {
 
     middleware(createRequest({ encrypted: true }), createResponse(), next);
 
-    expect(next).toHaveBeenCalledWith();
+    expect(receivedError).toBeUndefined();
   });
 
   it('rejects production plaintext even when an invalid insecure flag bypasses validation', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: true,
@@ -67,11 +84,14 @@ describe('createTransportSecurityMiddleware', () => {
 
     middleware(createRequest(), createResponse(), next);
 
-    expect(next.mock.calls[0][0].getStatus()).toBe(426);
+    expect(errorStatus(receivedError)).toBe(426);
   });
 
   it('rejects forwarded HTTPS from an untrusted remote address', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
@@ -88,11 +108,14 @@ describe('createTransportSecurityMiddleware', () => {
       next,
     );
 
-    expect(next.mock.calls[0][0].getStatus()).toBe(426);
+    expect(errorStatus(receivedError)).toBe(426);
   });
 
   it('permits forwarded HTTPS from a trusted remote address', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'production',
       allowInsecureHttp: false,
@@ -109,11 +132,14 @@ describe('createTransportSecurityMiddleware', () => {
       next,
     );
 
-    expect(next).toHaveBeenCalledWith();
+    expect(receivedError).toBeUndefined();
   });
 
   it('permits insecure UAT only when ALLOW_INSECURE_HTTP is true', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'uat',
       allowInsecureHttp: true,
@@ -122,11 +148,14 @@ describe('createTransportSecurityMiddleware', () => {
 
     middleware(createRequest(), createResponse(), next);
 
-    expect(next).toHaveBeenCalledWith();
+    expect(receivedError).toBeUndefined();
   });
 
   it('rejects insecure UAT when ALLOW_INSECURE_HTTP is false', () => {
-    const next = jest.fn();
+    let receivedError: unknown;
+    const next = (error?: unknown): void => {
+      receivedError = error;
+    };
     const middleware = createTransportSecurityMiddleware({
       nodeEnvironment: 'uat',
       allowInsecureHttp: false,
@@ -135,6 +164,6 @@ describe('createTransportSecurityMiddleware', () => {
 
     middleware(createRequest(), createResponse(), next);
 
-    expect(next.mock.calls[0][0].getStatus()).toBe(426);
+    expect(errorStatus(receivedError)).toBe(426);
   });
 });

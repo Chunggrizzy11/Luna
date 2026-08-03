@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { Connection } from 'mongoose';
+import { ConnectionStates, type Connection } from 'mongoose';
 import { MONGO_CONNECTION } from './mongo.providers';
 
 @Injectable()
@@ -9,6 +9,6 @@ export class DatabaseService {
   ) {}
 
   isConnected(): boolean {
-    return this.connection.readyState === 1;
+    return this.connection.readyState === ConnectionStates.connected;
   }
 }

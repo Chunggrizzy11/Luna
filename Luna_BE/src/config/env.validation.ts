@@ -22,7 +22,11 @@ const validNodeEnvironments: ReadonlySet<string> = new Set([
   'production',
 ]);
 
-function parseBoolean(value: unknown, name: string, defaultValue: boolean): boolean {
+function parseBoolean(
+  value: unknown,
+  name: string,
+  defaultValue: boolean,
+): boolean {
   if (value === undefined || value === '') {
     return defaultValue;
   }
@@ -72,13 +76,17 @@ function parseTrustedProxyIps(value: unknown): string[] {
   });
 
   if (hasInvalidAddress) {
-    throw new Error('TRUSTED_PROXY_IPS must contain valid IP addresses or CIDRs');
+    throw new Error(
+      'TRUSTED_PROXY_IPS must contain valid IP addresses or CIDRs',
+    );
   }
 
   return addresses;
 }
 
-export function validateEnvironment(config: Record<string, unknown>): Environment {
+export function validateEnvironment(
+  config: Record<string, unknown>,
+): Environment {
   const nodeEnvironment = (config.NODE_ENV ?? 'development') as string;
 
   if (!validNodeEnvironments.has(nodeEnvironment)) {
@@ -119,7 +127,8 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
   const configuredMongoUri = config.MONGODB_URI;
   if (
     nodeEnvironment === 'production' &&
-    (typeof configuredMongoUri !== 'string' || configuredMongoUri.trim().length === 0)
+    (typeof configuredMongoUri !== 'string' ||
+      configuredMongoUri.trim().length === 0)
   ) {
     throw new Error('MONGODB_URI is required in production');
   }
@@ -128,7 +137,8 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     throw new Error('MONGODB_URI must be a non-empty string');
   }
 
-  const corsOrigins = config.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173';
+  const corsOrigins =
+    config.CORS_ORIGINS ?? 'http://localhost:3000,http://localhost:5173';
   if (typeof corsOrigins !== 'string') {
     throw new Error('CORS_ORIGINS must be a comma-separated string');
   }
@@ -150,6 +160,8 @@ export function validateEnvironment(config: Record<string, unknown>): Environmen
     TRUST_PROXY: trustProxy,
     TRUSTED_PROXY_IPS: trustedProxyIps,
     CORS_ORIGINS: corsOrigins,
-    ...(fcmServiceAccountJson ? { FCM_SERVICE_ACCOUNT_JSON: fcmServiceAccountJson } : {}),
+    ...(fcmServiceAccountJson
+      ? { FCM_SERVICE_ACCOUNT_JSON: fcmServiceAccountJson }
+      : {}),
   };
 }

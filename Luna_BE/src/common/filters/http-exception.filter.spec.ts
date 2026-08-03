@@ -19,9 +19,15 @@ describe('HttpExceptionFilter', () => {
   });
 
   const createHost = (path: string) => {
-    const status = jest.fn();
-    const json = jest.fn();
-    status.mockReturnValue({ json });
+    let responseBody: unknown;
+    let responseStatus: number | undefined;
+    const json = (body: unknown): void => {
+      responseBody = body;
+    };
+    const status = (statusCode: number): { json: typeof json } => {
+      responseStatus = statusCode;
+      return { json };
+    };
 
     return {
       host: {
@@ -30,13 +36,14 @@ describe('HttpExceptionFilter', () => {
           getResponse: () => ({ status, json }),
         }),
       } as ArgumentsHost,
-      status,
-      json,
+      getResponseBody: () => responseBody,
+      getResponseStatus: () => responseStatus,
     };
   };
 
   it('serializes HttpException details in the standard error envelope', () => {
-    const { host, status, json } = createHost('/api/v1/devices');
+    const { host, getResponseBody, getResponseStatus } =
+      createHost('/api/v1/devices');
     const filter = new HttpExceptionFilter();
 
     filter.catch(
@@ -44,43 +51,49 @@ describe('HttpExceptionFilter', () => {
       host,
     );
 
-    expect(status).toHaveBeenCalledWith(HttpStatus.BAD_REQUEST);
-    expect(json).toHaveBeenCalledWith(
+    expect(getResponseStatus()).toBe(HttpStatus.BAD_REQUEST);
+    expect(getResponseBody()).toEqual(
       expect.objectContaining({
         code: 'BAD_REQUEST',
         message: 'Bad Request',
         details: ['role must be valid'],
         path: '/api/v1/devices',
-        timestamp: expect.any(String),
       }),
     );
+    expect(
+      typeof (getResponseBody() as { timestamp?: unknown }).timestamp,
+    ).toBe('string');
   });
 
   it('does not expose unexpected error details', () => {
-    const { host, status, json } = createHost('/api/v1/devices');
+    const { host, getResponseBody, getResponseStatus } =
+      createHost('/api/v1/devices');
     const filter = new HttpExceptionFilter();
 
     filter.catch(new Error('database password leaked'), host);
 
-    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-    expect(json).toHaveBeenCalledWith(
+    expect(getResponseStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+    expect(getResponseBody()).toEqual(
       expect.objectContaining({
         code: 'INTERNAL_SERVER_ERROR',
         message: 'Internal server error',
         details: null,
         path: '/api/v1/devices',
-        timestamp: expect.any(String),
       }),
     );
+    expect(
+      typeof (getResponseBody() as { timestamp?: unknown }).timestamp,
+    ).toBe('string');
 
-    const serialized = JSON.stringify(json.mock.calls[0][0]);
+    const serialized = JSON.stringify(getResponseBody());
     expect(JSON.parse(serialized)).toEqual(
       expect.objectContaining({ details: null }),
     );
   });
 
   it('does not expose 5xx HttpException details through JSON responses', () => {
-    const { host, status, json } = createHost('/api/v1/devices');
+    const { host, getResponseBody, getResponseStatus } =
+      createHost('/api/v1/devices');
     const filter = new HttpExceptionFilter();
     const internalDetails =
       'Error: mongodb://luna_app:password@db.internal/luna_uat';
@@ -90,8 +103,8 @@ describe('HttpExceptionFilter', () => {
       host,
     );
 
-    expect(status).toHaveBeenCalledWith(HttpStatus.INTERNAL_SERVER_ERROR);
-    const serialized = JSON.stringify(json.mock.calls[0][0]);
+    expect(getResponseStatus()).toBe(HttpStatus.INTERNAL_SERVER_ERROR);
+    const serialized = JSON.stringify(getResponseBody());
     expect(serialized).toContain('"details":null');
     expect(serialized).not.toContain(internalDetails);
     expect(serialized).toContain('Internal server error');

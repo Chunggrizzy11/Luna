@@ -44,11 +44,7 @@ function isSecureTransport(
 export function createTransportSecurityMiddleware(
   options: TransportSecurityOptions,
 ): RequestHandler {
-  return (
-    request: Request,
-    _response: Response,
-    next: NextFunction,
-  ): void => {
+  return (request: Request, _response: Response, next: NextFunction): void => {
     if (
       isSecureTransport(request, options.trustedProxy) ||
       (options.nodeEnvironment !== 'production' && options.allowInsecureHttp)
@@ -57,11 +53,6 @@ export function createTransportSecurityMiddleware(
       return;
     }
 
-    next(
-      new HttpException(
-        'HTTPS is required for this environment',
-        426,
-      ),
-    );
+    next(new HttpException('HTTPS is required for this environment', 426));
   };
 }

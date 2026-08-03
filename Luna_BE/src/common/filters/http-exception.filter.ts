@@ -17,7 +17,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
     const request = context.getRequest<Request>();
-    const status =
+    const status: number =
       exception instanceof HttpException
         ? exception.getStatus()
         : HttpStatus.INTERNAL_SERVER_ERROR;
@@ -29,7 +29,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
       path: request.url,
     };
 
-    if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (status >= 500) {
       this.logger.error(
         `Unhandled HTTP ${status}: ${this.sanitizeForLog(exception)}`,
       );
@@ -64,7 +64,10 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const raw = typeof value === 'string' ? value : JSON.stringify(value);
 
     return raw
-      .replace(/mongodb(?:\+srv)?:\/\/[^\s'\"]+/gi, '[REDACTED_MONGODB_URI]')
-      .replace(/\b(password|token|secret|pepper)\b\s*[:=]\s*[^,\s}]+/gi, '$1=[REDACTED]');
+      .replace(/mongodb(?:\+srv)?:\/\/[^\s'"]+/gi, '[REDACTED_MONGODB_URI]')
+      .replace(
+        /\b(password|token|secret|pepper)\b\s*[:=]\s*[^,\s}]+/gi,
+        '$1=[REDACTED]',
+      );
   }
 }

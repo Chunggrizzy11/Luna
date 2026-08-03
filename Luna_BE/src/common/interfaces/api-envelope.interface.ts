@@ -6,7 +6,7 @@ export interface ApiSuccessEnvelope<T> {
 export interface ApiErrorEnvelope {
   code: string;
   message: string;
-  details: unknown | null;
+  details: unknown;
   timestamp: string;
   path: string;
 }

@@ -7,9 +7,9 @@ const validUat = {
 
 describe('validateEnvironment', () => {
   it('rejects a deployable environment without DEVICE_TOKEN_PEPPER', () => {
-    expect(() =>
-      validateEnvironment({ NODE_ENV: 'uat' }),
-    ).toThrow('DEVICE_TOKEN_PEPPER is required');
+    expect(() => validateEnvironment({ NODE_ENV: 'uat' })).toThrow(
+      'DEVICE_TOKEN_PEPPER is required',
+    );
   });
 
   it('rejects non-numeric PORT values', () => {

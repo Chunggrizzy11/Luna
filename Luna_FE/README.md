@@ -1,17 +1,29 @@
-# luna_fe
+# Luna Flutter app
 
-A new Flutter project.
+## Run against UAT
 
-## Getting Started
+Install Flutter, fetch packages, and start the app with the API base URL. The
+value includes the backend's `/api/v1` prefix and should use HTTPS for UAT.
 
-This project is a starting point for a Flutter application.
+```powershell
+flutter pub get
+flutter run --dart-define=API_BASE_URL=https://<UAT_API_HOST>/api/v1
+```
 
-A few resources to get you started if this is your first Flutter project:
+For an Android emulator running a local development backend, use its host
+alias only with an explicit development backend configuration:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```powershell
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api/v1
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The backend environment and MongoDB UAT user setup are documented in
+`../Luna_BE/README.md`. MongoDB Compass is an optional read-only inspection
+client, not the MongoDB Server used by the app.
+
+## Quality checks
+
+```powershell
+flutter analyze
+flutter test
+```
