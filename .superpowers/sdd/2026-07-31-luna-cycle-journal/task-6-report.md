@@ -88,3 +88,74 @@ An unspecified `flutter test integration_test\\cycle_journal_test.dart` also ref
 ## Concerns
 
 - The only outstanding validation is runtime execution of the Flutter integration target, blocked by the host's Developer Mode/symlink policy; static analysis and the full non-integration Flutter suite are clean.
+
+## Review round 1
+
+### Findings addressed
+
+- The Flutter integration checkpoint now starts the production application path: `AppInitializer.initialize` receives an in-memory `SecureStorageBackend` and fake-server base URL, then `LunaApp`/`AppRouter` routes an initially missing identity through onboarding registration into the owner home shell. The test confirms the persisted identity and owner route.
+- The test no longer constructs `ApiClient`/`MaterialApp(OwnerShell)` directly. It uses `AppInitializer`'s production `DioClient`, including its bearer token interceptor.
+- The fake server now exposes only the routes used by the real flow. It validates exact method/path, expected-and-only query parameters, complete JSON body, JSON headers, and no-Bearer registration versus exact `Bearer integration-owner-token` on every protected request. Any unknown/drifting request is recorded and returned as non-2xx; the test asserts no contract failures.
+- Added the requested cross-date calendar regression: with injected local day `2025-02-14`, the calendar must request `month=2025-02`. The old implementation used host `DateTime.now()` and selected `2026-08`; the minimal production fix initializes focus and today highlighting from `localDayProvider`.
+- End-cycle verification now snapshots dashboard/calendar/journal GET counts immediately before ending the cycle, requires each to increase after invalidation, confirms the cycle UI is inactive, then opens the journal and confirms the saved daily log remains.
+
+### Red/green evidence
+
+```text
+flutter test test\\features\\health\\owner_experience_widget_test.dart
+=> RED: calendar defaults its focused month from the injected local day
+=> Expected: 2025-02; Actual: 2026-08
+
+dart format lib\\features\\calendar\\presentation\\cycle_calendar_page.dart test\\features\\health\\owner_experience_widget_test.dart
+flutter test test\\features\\health\\owner_experience_widget_test.dart
+=> GREEN: 8 tests passed
+```
+
+### Round 1 verification
+
+Flutter, working directory `Luna_FE`:
+
+```text
+dart format integration_test\\cycle_journal_test.dart
+flutter analyze integration_test\\cycle_journal_test.dart
+=> No issues found
+
+dart format --set-exit-if-changed lib test integration_test
+=> Formatted 101 files (0 changed)
+
+flutter analyze
+=> No issues found
+
+flutter test
+=> All tests passed (78 tests)
+
+flutter test -d windows integration_test\\cycle_journal_test.dart
+=> Failed before test execution: Building with plugins requires symlink support.
+=> Flutter requests Windows Developer Mode: start ms-settings:developers
+```
+
+Backend re-verification, working directory `Luna_BE`:
+
+```text
+npm run lint
+=> exit 0
+
+npm test -- --runInBand
+=> 15 suites passed, 89 tests passed
+
+npm run test:e2e -- --runInBand
+=> 8 suites passed, 29 tests passed
+=> expected existing test diagnostic: "Unhandled HTTP 500: predecessor write failed"
+
+npm run build
+=> exit 0
+
+npm audit --omit=dev
+=> found 0 vulnerabilities
+```
+
+### Round 1 self-review and concern
+
+- The only production edit is the two uses of local day in `CycleCalendarPage`; it corrects host-time dependence and supports deterministic injection without feature expansion.
+- Backend flow remains unchanged.
+- Runtime execution of the Flutter integration test remains blocked before Dart test execution by the host's Windows Developer Mode/symlink policy. Static analysis confirms the full integration source compiles, and the full regular Flutter suite passes.

@@ -21,12 +21,19 @@ class CycleCalendarPage extends ConsumerStatefulWidget {
 }
 
 class _CycleCalendarPageState extends ConsumerState<CycleCalendarPage> {
-  late DateTime _focused = widget.initialMonth ?? DateTime.now();
+  late DateTime _focused;
+
+  @override
+  void initState() {
+    super.initState();
+    _focused = widget.initialMonth ?? ref.read(localDayProvider);
+  }
 
   String get _month => DateFormat('yyyy-MM').format(_focused);
 
   @override
   Widget build(BuildContext context) {
+    final today = ref.watch(localDayProvider);
     final state = ref.watch(calendarProvider(_month));
     return Scaffold(
       appBar: AppBar(title: const Text('Lịch chu kỳ')),
@@ -64,7 +71,7 @@ class _CycleCalendarPageState extends ConsumerState<CycleCalendarPage> {
                 prioritizedBuilder: (context, day, focused) => _day(
                   day,
                   calendar,
-                  today: isSameDay(day, DateTime.now()),
+                  today: isSameDay(day, today),
                   outside: day.month != focused.month,
                 ),
               ),

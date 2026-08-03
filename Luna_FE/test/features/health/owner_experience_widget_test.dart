@@ -117,6 +117,28 @@ void main() {
     expect(DateUtils.isSameDay(selected, DateTime(2026, 8, 3)), isTrue);
   });
 
+  testWidgets(
+    'calendar defaults its focused month from the injected local day',
+    (tester) async {
+      String? requestedMonth;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            clockProvider.overrideWithValue(() => DateTime(2025, 2, 14)),
+            calendarProvider.overrideWith((ref, month) async {
+              requestedMonth = month;
+              return CycleCalendar(month: month, days: const []);
+            }),
+          ],
+          child: const MaterialApp(home: CycleCalendarPage()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(requestedMonth, '2025-02');
+    },
+  );
+
   testWidgets('daily log supports mood symptom note edit and delete', (
     tester,
   ) async {
