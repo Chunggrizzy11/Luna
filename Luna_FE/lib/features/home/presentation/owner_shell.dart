@@ -11,6 +11,7 @@ import '../../cycle/presentation/cycle_page.dart';
 import '../../health/presentation/daily_log_sheet.dart';
 import '../../health/presentation/health_journal_page.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../notification/presentation/notification_providers.dart';
 import 'home_page.dart';
 
 class OwnerShell extends ConsumerStatefulWidget {
@@ -33,6 +34,7 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
       CycleCalendarPage(onDayTap: _openLog),
       HealthJournalPage(onEntryTap: _openLog),
       const CyclePage(),
+      const NotificationPage(),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
@@ -59,6 +61,15 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
             icon: Icon(Icons.water_drop_outlined),
             selectedIcon: Icon(Icons.water_drop),
             label: 'Chu kỳ',
+          ),
+          NavigationDestination(
+            icon: Badge(
+              label: Text('$unreadCount'),
+              isLabelVisible: unreadCount > 0,
+              child: const Icon(Icons.notifications_outlined),
+            ),
+            selectedIcon: const Icon(Icons.notifications),
+            label: 'Thông báo',
           ),
         ],
       ),

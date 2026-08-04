@@ -10,6 +10,12 @@ import notificationConfig from './config/notification.config';
 import { DatabaseModule } from './database/database.module';
 import { DeviceAuthGuard } from './common/guards/device-auth.guard';
 import { DeviceModule } from './modules/device/device.module';
+import { PairingModule } from './modules/pairing/pairing.module';
+import { NotificationModule } from './modules/notification/notification.module';
+import { SchedulerModule } from './modules/scheduler/scheduler.module';
+import { StatisticsModule } from './modules/statistics/statistics.module';
+import { SettingsModule } from './modules/settings/settings.module';
+import { UatSeedModule } from './seed/uat-seed.module';
 import { CycleModule } from './modules/cycle/cycle.module';
 import { CalendarModule } from './modules/calendar/calendar.module';
 import { HealthModule } from './modules/health/health.module';
@@ -26,6 +32,12 @@ import { SymptomModule } from './modules/symptom/symptom.module';
     }),
     DatabaseModule,
     DeviceModule,
+    PairingModule,
+    NotificationModule,
+    SchedulerModule,
+    StatisticsModule,
+    SettingsModule,
+    UatSeedModule,
     CycleModule,
     CalendarModule,
     HealthModule,

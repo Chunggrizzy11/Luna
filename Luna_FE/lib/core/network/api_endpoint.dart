@@ -9,6 +9,11 @@ abstract final class ApiEndpoint {
   static const dashboard = '/health/dashboard';
   static const careToday = '/health/care/today';
   static const journal = '/health/journal';
+  static const pairingCode = '/pairing/code';
+  static const pairingJoin = '/pairing/join';
+  static const pairingUnpair = '/pairing/unpair';
+  static const pairingStatus = '/pairing/status';
+  static const notifications = '/notifications';
 
   static String mood(String date) => '/moods/$date';
   static String symptoms(String date) => '/symptoms/$date';

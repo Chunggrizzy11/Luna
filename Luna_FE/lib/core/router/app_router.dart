@@ -2,8 +2,11 @@ import 'package:flutter/widgets.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/home/presentation/owner_shell.dart';
+import '../../features/notification/presentation/notification_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
+import '../../features/partner/presentation/join_pairing_page.dart';
 import '../../features/partner/presentation/partner_pending_page.dart';
+import '../../features/partner/presentation/pairing_page.dart';
 import '../../features/splash/presentation/bootstrap_error_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
 import '../../shared/entities/device_identity.dart';
@@ -45,6 +48,10 @@ class AppRouter {
             path: AppRoutes.home,
             builder: (context, state) =>
                 homeForIdentity(config.identityState.identity),
+          ),
+          GoRoute(
+            path: AppRoutes.notifications,
+            builder: (context, state) => const NotificationPage(),
           ),
         ],
       );
