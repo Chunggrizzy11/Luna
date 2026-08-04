@@ -125,5 +125,35 @@ class JournalEntry {
   );
 }
 
+@immutable
+class JournalBatch {
+  const JournalBatch({
+    required this.items,
+    required this.page,
+    required this.limit,
+    required this.hasMore,
+  });
+
+  final List<JournalEntry> items;
+  final int page;
+  final int limit;
+  final bool hasMore;
+
+  factory JournalBatch.fromJson(Map<String, dynamic> json) {
+    final items = List<JournalEntry>.unmodifiable(
+      (json['items'] as List<Object?>).map(
+        (item) => JournalEntry.fromJson(item! as Map<String, dynamic>),
+      ),
+    );
+    final limit = json['limit'] as int;
+    return JournalBatch(
+      items: items,
+      page: json['page'] as int,
+      limit: limit,
+      hasMore: json['hasMore'] as bool? ?? items.length >= limit,
+    );
+  }
+}
+
 DateTime? _optionalDate(Object? value) =>
     value == null ? null : DateTime.parse(value as String);

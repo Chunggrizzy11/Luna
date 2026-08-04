@@ -48,7 +48,10 @@ describe('CareSuggestionService', () => {
         relationship: 'owner',
       }),
     } as unknown as DashboardService;
-    const service = new CareSuggestionService(dashboard, () => '2026-03-12');
+    const service = new CareSuggestionService(
+      dashboard,
+      new BangkokBusinessDate(() => new Date('2026-03-11T17:00:00.000Z')),
+    );
 
     const [first, second] = await Promise.all([
       service.getToday(pairedOwner),
@@ -73,7 +76,10 @@ describe('CareSuggestionService', () => {
         relationship: 'unpaired',
       }),
     } as unknown as DashboardService;
-    const service = new CareSuggestionService(dashboard, () => '2026-03-12');
+    const service = new CareSuggestionService(
+      dashboard,
+      new BangkokBusinessDate(() => new Date('2026-03-11T17:00:00.000Z')),
+    );
 
     await expect(
       service.getToday({ ...pairedOwner, role: DeviceRole.PARTNER }),
@@ -84,3 +90,4 @@ describe('CareSuggestionService', () => {
     });
   });
 });
+import { BangkokBusinessDate } from '../../common/date/business-date';

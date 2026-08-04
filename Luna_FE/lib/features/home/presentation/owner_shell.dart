@@ -26,7 +26,8 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
   Widget build(BuildContext context) {
     final pages = [
       HomePage(
-        onOpenDailyLog: () => _openLog(ref.read(clockProvider)()),
+        onOpenDailyLog: () =>
+            _openLog(ref.read(businessDateClockProvider).today()),
         onOpenCycle: () => setState(() => _index = 3),
       ),
       CycleCalendarPage(onDayTap: _openLog),

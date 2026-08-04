@@ -39,6 +39,8 @@ interface StoredCycle extends CycleRecord {
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_DERIVED_CYCLE_LENGTH = 365;
+const MAX_RECORDED_PERIOD_LENGTH = 90;
 
 @Injectable()
 export class CycleService {
@@ -82,26 +84,23 @@ export class CycleService {
     }
 
     const previous = await this.cycleModel
-      .findOne({
-        ownerDeviceId: owner.deviceId,
-        endDate: { $ne: null },
-        startDate: { $lt: startDate },
-      })
+      .findOne({ ownerDeviceId: owner.deviceId })
       .sort({ startDate: -1, _id: -1 })
       .session(session)
       .lean()
       .exec();
+    if (
+      previous &&
+      (startDate <= previous.startDate ||
+        (previous.endDate !== null && startDate <= previous.endDate))
+    ) {
+      throw new ConflictException(
+        'A new cycle must start after the latest cycle dates.',
+      );
+    }
     const derivedCycleLength = previous
       ? this.daysBetween(previous.startDate, startDate)
       : null;
-    if (
-      derivedCycleLength !== null &&
-      (derivedCycleLength < 1 || derivedCycleLength > 365)
-    ) {
-      throw new BadRequestException(
-        'Derived cycle length must be between 1 and 365 days.',
-      );
-    }
 
     const [created] = await this.cycleModel.create(
       [
@@ -115,7 +114,11 @@ export class CycleService {
       { session },
     );
 
-    if (previous && derivedCycleLength !== null) {
+    if (
+      previous &&
+      derivedCycleLength !== null &&
+      derivedCycleLength <= MAX_DERIVED_CYCLE_LENGTH
+    ) {
       const updatedPrevious = await this.cycleModel
         .findOneAndUpdate(
           { _id: previous._id, ownerDeviceId: owner.deviceId },
@@ -145,12 +148,18 @@ export class CycleService {
       throw new ConflictException('A cycle cannot end before it starts.');
     }
 
+    const inclusivePeriodLength =
+      this.daysBetween(active.startDate, endDate) + 1;
+    const periodLength =
+      inclusivePeriodLength <= MAX_RECORDED_PERIOD_LENGTH
+        ? inclusivePeriodLength
+        : null;
     const updated = await this.cycleModel
       .findOneAndUpdate(
         { _id: active._id, ownerDeviceId: owner.deviceId, endDate: null },
         {
           endDate,
-          periodLength: this.daysBetween(active.startDate, endDate) + 1,
+          periodLength,
         },
         { returnDocument: 'after', runValidators: true },
       )

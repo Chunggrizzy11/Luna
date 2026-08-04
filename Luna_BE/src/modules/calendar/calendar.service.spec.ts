@@ -1,5 +1,6 @@
 import { ForbiddenException } from '@nestjs/common';
 import type { Model } from 'mongoose';
+import { BangkokBusinessDate } from '../../common/date/business-date';
 import { DeviceRole, DeviceStatus } from '../device/schemas/device.schema';
 import {
   CYCLE_SETTINGS_PROVIDER,
@@ -39,7 +40,7 @@ describe('CalendarService', () => {
     service = new CalendarService(
       model as unknown as Model<Cycle>,
       settings,
-      () => new Date('2026-03-15T12:00:00.000Z'),
+      new BangkokBusinessDate(() => new Date('2026-03-15T12:00:00.000Z')),
     );
   });
 
@@ -74,6 +75,46 @@ describe('CalendarService', () => {
     expect(result.days.find((day) => day.date === '2026-03-15')).toMatchObject({
       status: 'ovulation',
       isOvulation: true,
+    });
+  });
+
+  it('keeps observed, predicted, and ovulation semantics across month boundaries', async () => {
+    const cycles = [
+      {
+        startDate: '2026-01-27',
+        endDate: '2026-01-31',
+        periodLength: 5,
+        cycleLength: 31,
+      },
+      {
+        startDate: '2026-02-27',
+        endDate: '2026-03-03',
+        periodLength: 5,
+        cycleLength: 31,
+      },
+    ];
+    model.find
+      .mockReturnValueOnce(query(cycles) as never)
+      .mockReturnValueOnce(query(cycles) as never);
+
+    const march = await service.getMonth(owner, '2026-03');
+    const april = await service.getMonth(owner, '2026-04');
+
+    expect(march.days.find((day) => day.date === '2026-03-01')).toMatchObject({
+      status: 'observed-period',
+      isObservedPeriod: true,
+    });
+    expect(march.days.find((day) => day.date === '2026-03-16')).toMatchObject({
+      status: 'ovulation',
+      isOvulation: true,
+    });
+    expect(march.days.find((day) => day.date === '2026-03-30')).toMatchObject({
+      status: 'predicted-period',
+      isPredictedPeriod: true,
+    });
+    expect(april.days.find((day) => day.date === '2026-04-03')).toMatchObject({
+      status: 'predicted-period',
+      isPredictedPeriod: true,
     });
   });
 

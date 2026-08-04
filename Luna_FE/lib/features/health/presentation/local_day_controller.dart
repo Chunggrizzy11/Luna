@@ -2,32 +2,31 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-typedef Clock = DateTime Function();
+import '../../../core/time/business_date_clock.dart';
+
 typedef CancelSchedule = void Function();
 typedef DaySchedule =
     CancelSchedule Function(Duration delay, void Function() callback);
 
 class LocalDayController extends StateNotifier<DateTime> {
-  LocalDayController({required this.clock, DaySchedule? schedule})
+  LocalDayController({required this.businessDateClock, DaySchedule? schedule})
     : _schedule = schedule ?? _timerSchedule,
-      super(_dateOnly(clock())) {
+      super(businessDateClock.today()) {
     _scheduleNext();
   }
 
-  final Clock clock;
+  final BusinessDateClock businessDateClock;
   final DaySchedule _schedule;
   CancelSchedule? _cancel;
 
   void refresh() {
-    state = _dateOnly(clock());
+    state = businessDateClock.today();
     _scheduleNext();
   }
 
   void _scheduleNext() {
     _cancel?.call();
-    final now = clock();
-    final tomorrow = DateTime(now.year, now.month, now.day + 1);
-    _cancel = _schedule(tomorrow.difference(now), refresh);
+    _cancel = _schedule(businessDateClock.untilNextDay(), refresh);
   }
 
   @override
@@ -43,7 +42,4 @@ class LocalDayController extends StateNotifier<DateTime> {
     final timer = Timer(delay, callback);
     return timer.cancel;
   }
-
-  static DateTime _dateOnly(DateTime value) =>
-      DateTime(value.year, value.month, value.day);
 }

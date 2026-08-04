@@ -20,6 +20,7 @@ abstract final class AppInitializer {
 
     final dioClient = DioClient(
       tokenProvider: () async => identityState.identity?.token,
+      onUnauthorized: identityState.revokeIdentity,
       baseUrl: apiBaseUrl ?? Env.apiBaseUrl,
     );
     final apiClient = ApiClient(dioClient.dio);

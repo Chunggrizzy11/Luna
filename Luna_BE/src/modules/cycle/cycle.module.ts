@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { BusinessDateModule } from '../../common/date/business-date.module';
 import { CycleController } from './cycle.controller';
 import {
   CYCLE_SETTINGS_PROVIDER,
@@ -18,6 +19,7 @@ const defaultCycleSettingsProvider: CycleSettingsProvider = {
 
 @Module({
   imports: [
+    BusinessDateModule,
     MongooseModule.forFeature([{ name: Cycle.name, schema: CycleSchema }]),
   ],
   controllers: [CycleController],

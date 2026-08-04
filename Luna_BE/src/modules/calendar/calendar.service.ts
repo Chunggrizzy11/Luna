@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
+import { BusinessDateClock } from '../../common/date/business-date';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { DeviceRole } from '../device/schemas/device.schema';
 import {
@@ -20,7 +21,6 @@ import { Cycle } from '../cycle/schemas/cycle.schema';
 import type { CalendarDay } from '../cycle/cycle.types';
 
 const MONTH_PATTERN = /^(\d{4})-(\d{2})$/;
-export const CALENDAR_NOW = 'CALENDAR_NOW';
 
 export interface CalendarResponse {
   month: string;
@@ -33,7 +33,7 @@ export class CalendarService {
     @InjectModel(Cycle.name) private readonly cycleModel: Model<Cycle>,
     @Inject(CYCLE_SETTINGS_PROVIDER)
     private readonly settingsProvider: CycleSettingsProvider,
-    @Inject(CALENDAR_NOW) private readonly now: () => Date = () => new Date(),
+    private readonly businessDate: BusinessDateClock,
   ) {}
 
   async getMonth(
@@ -52,7 +52,7 @@ export class CalendarService {
         .exec(),
       this.settingsProvider.getSettings(owner.deviceId),
     ]);
-    const today = this.now().toISOString().slice(0, 10);
+    const today = this.businessDate.today();
     const summary = calculateCycleSummary(cycles, settings, today);
     return { month, days: buildCalendarDays(summary, month) };
   }

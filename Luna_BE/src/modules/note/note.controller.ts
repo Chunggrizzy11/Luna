@@ -1,6 +1,7 @@
 import { Body, Controller, Delete, Get, Param, Put } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { CurrentDevice } from '../../common/decorators/current-device.decorator';
+import { NoteEnvelopeDto } from '../../common/dto/owner-health-api-response.dto';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { NoteService } from './note.service';
@@ -12,6 +13,7 @@ export class NoteController {
   constructor(private readonly noteService: NoteService) {}
 
   @Get(':date')
+  @ApiOkResponse({ type: NoteEnvelopeDto })
   get(
     @CurrentDevice() owner: AuthenticatedDevice,
     @Param('date') date: string,
@@ -20,6 +22,7 @@ export class NoteController {
   }
 
   @Put(':date')
+  @ApiOkResponse({ type: NoteEnvelopeDto })
   update(
     @CurrentDevice() owner: AuthenticatedDevice,
     @Param('date') date: string,
@@ -29,6 +32,7 @@ export class NoteController {
   }
 
   @Delete(':date')
+  @ApiOkResponse({ type: NoteEnvelopeDto })
   remove(
     @CurrentDevice() owner: AuthenticatedDevice,
     @Param('date') date: string,

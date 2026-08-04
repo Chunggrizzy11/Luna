@@ -1,5 +1,6 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { BusinessDateClock } from '../../common/date/business-date';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import {
   DashboardService,
@@ -16,19 +17,15 @@ export interface CareSuggestionResponse {
   suggestion: Pick<CareSuggestionSeed, 'id' | 'title' | 'description'> | null;
 }
 
-export const CARE_TODAY_PROVIDER = 'CARE_TODAY_PROVIDER';
-
 @Injectable()
 export class CareSuggestionService {
   constructor(
     private readonly dashboardService: DashboardService,
-    @Inject(CARE_TODAY_PROVIDER)
-    private readonly today: () => string = () =>
-      new Date().toISOString().slice(0, 10),
+    private readonly businessDate: BusinessDateClock,
   ) {}
 
   async getToday(device: AuthenticatedDevice): Promise<CareSuggestionResponse> {
-    const date = this.today();
+    const date = this.businessDate.today();
     const audience = await this.dashboardService.resolveAudience(device);
     if (audience.relationship === 'unpaired') {
       return { date, relationship: 'unpaired', suggestion: null };

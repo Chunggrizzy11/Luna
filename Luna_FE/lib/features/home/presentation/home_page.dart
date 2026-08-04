@@ -118,9 +118,8 @@ class _CycleOverview extends StatelessWidget {
               ),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                summary.daysUntilNextPeriod == null
-                    ? 'Ghi nhận kỳ kinh để nhận dự đoán.'
-                    : 'Còn khoảng ${summary.daysUntilNextPeriod} ngày đến kỳ tiếp theo',
+                _nextPeriodMessage(summary.daysUntilNextPeriod),
+                key: const ValueKey('next-period-status'),
               ),
               if (summary.predictedPeriodStart != null)
                 Text(
@@ -133,6 +132,19 @@ class _CycleOverview extends StatelessWidget {
       ],
     ),
   );
+}
+
+String _nextPeriodMessage(int? daysUntilNextPeriod) {
+  if (daysUntilNextPeriod == null) {
+    return 'Ghi nhận kỳ kinh để nhận dự đoán.';
+  }
+  if (daysUntilNextPeriod < 0) {
+    return 'Đã trễ khoảng ${daysUntilNextPeriod.abs()} ngày so với dự đoán';
+  }
+  if (daysUntilNextPeriod == 0) {
+    return 'Kỳ tiếp theo được dự đoán bắt đầu hôm nay';
+  }
+  return 'Còn khoảng $daysUntilNextPeriod ngày đến kỳ tiếp theo';
 }
 
 class _DailyCard extends StatelessWidget {

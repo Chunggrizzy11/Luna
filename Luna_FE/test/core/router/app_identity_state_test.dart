@@ -67,6 +67,27 @@ void main() {
       expect(config.identityState.isRetrying, isFalse);
     },
   );
+
+  test(
+    'revoked token clears secure identity and publishes missing state',
+    () async {
+      final backend = _ControlledBackend();
+      final storage = SecureStorageService(backend: backend);
+      const identity = DeviceIdentity(
+        deviceId: 'device-1',
+        token: 'revoked-token',
+        role: DeviceRole.owner,
+      );
+      await storage.writeIdentity(identity);
+      final state = await AppIdentityState.initialize(storage);
+
+      await state.revokeIdentity();
+
+      expect(state.status, AppIdentityStatus.missing);
+      expect(state.identity, isNull);
+      expect(await storage.readIdentity(), isNull);
+    },
+  );
 }
 
 class _ControlledBackend implements SecureStorageBackend {

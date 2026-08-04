@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
+import '../../../core/time/business_date_clock.dart';
 import '../../calendar/data/calendar_repository.dart';
 import '../../calendar/domain/cycle_calendar.dart';
 import '../../cycle/data/cycle_repository.dart';
@@ -13,14 +14,19 @@ import '../../symptom/data/symptom_repository.dart';
 import '../data/health_repository.dart';
 import '../domain/health_models.dart';
 import 'daily_log_controller.dart';
+import 'journal_controller.dart';
 import 'local_day_controller.dart';
 
 final apiClientProvider = Provider<ApiClient>(
   (ref) => throw StateError('apiClientProvider must be overridden at root'),
 );
-final clockProvider = Provider<Clock>((ref) => DateTime.now);
+final businessDateClockProvider = Provider<BusinessDateClock>(
+  (ref) => BangkokBusinessDateClock(),
+);
 final localDayProvider = StateNotifierProvider<LocalDayController, DateTime>(
-  (ref) => LocalDayController(clock: ref.watch(clockProvider)),
+  (ref) => LocalDayController(
+    businessDateClock: ref.watch(businessDateClockProvider),
+  ),
 );
 
 final healthRepositoryProvider = Provider<HealthRepository>(
@@ -51,18 +57,24 @@ final careTodayProvider = FutureProvider.autoDispose<CareSuggestion?>((ref) {
   ref.watch(localDayProvider);
   return ref.watch(healthRepositoryProvider).careToday();
 });
-final journalProvider = FutureProvider.autoDispose<List<JournalEntry>>(
-  (ref) => ref.watch(healthRepositoryProvider).journal(),
-);
+final journalProvider =
+    StateNotifierProvider.autoDispose<JournalController, JournalState>(
+      (ref) => JournalController(
+        loadPage: (page, limit) => ref
+            .watch(healthRepositoryProvider)
+            .journal(page: page, limit: limit),
+      ),
+    );
 final currentCycleProvider = FutureProvider.autoDispose<Cycle?>(
   (ref) => ref.watch(cycleRepositoryProvider).current(),
 );
 final calendarProvider = FutureProvider.autoDispose
-    .family<CycleCalendar, String>(
-      (ref, month) => ref
+    .family<CycleCalendar, String>((ref, month) {
+      ref.watch(localDayProvider);
+      return ref
           .watch(calendarRepositoryProvider)
-          .month(DateTime.parse('$month-01')),
-    );
+          .month(DateTime.parse('$month-01'));
+    });
 
 final dailyLogForDateProvider = FutureProvider.autoDispose
     .family<DailyLog, String>((ref, date) async {

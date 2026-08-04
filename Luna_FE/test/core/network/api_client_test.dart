@@ -161,6 +161,45 @@ void main() {
   );
 
   test(
+    'real 401 revokes identity while 403 remains a forbidden failure',
+    () async {
+      var revocations = 0;
+      final unauthorizedClient = DioClient(
+        tokenProvider: () async => 'revoked-token',
+        onUnauthorized: () async => revocations += 1,
+        enableLogging: false,
+      );
+      unauthorizedClient.dio.httpClientAdapter = _StubAdapter(
+        (_) => _errorResponse(401, 'Token revoked'),
+      );
+
+      await expectLater(
+        ApiClient(
+          unauthorizedClient.dio,
+        ).get<Object?>('/health/dashboard', decode: (value) => value),
+        throwsA(isA<UnauthorizedFailure>()),
+      );
+      expect(revocations, 1);
+
+      final forbiddenClient = DioClient(
+        tokenProvider: () async => 'valid-token',
+        onUnauthorized: () async => revocations += 1,
+        enableLogging: false,
+      );
+      forbiddenClient.dio.httpClientAdapter = _StubAdapter(
+        (_) => _errorResponse(403, 'Owner only'),
+      );
+      await expectLater(
+        ApiClient(
+          forbiddenClient.dio,
+        ).get<Object?>('/cycles', decode: (value) => value),
+        throwsA(isA<ForbiddenFailure>()),
+      );
+      expect(revocations, 1);
+    },
+  );
+
+  test(
     'malformed registration credentials surface as typed failures',
     () async {
       final dioClient = DioClient(
@@ -205,6 +244,18 @@ ResponseBody _jsonResponse(Map<String, Object?> body) =>
     ResponseBody.fromString(
       jsonEncode(body),
       200,
+      headers: {
+        Headers.contentTypeHeader: [Headers.jsonContentType],
+      },
+    );
+
+ResponseBody _errorResponse(int status, String message) =>
+    ResponseBody.fromString(
+      jsonEncode({
+        'code': status == 401 ? 'UNAUTHORIZED' : 'FORBIDDEN',
+        'message': message,
+      }),
+      status,
       headers: {
         Headers.contentTypeHeader: [Headers.jsonContentType],
       },

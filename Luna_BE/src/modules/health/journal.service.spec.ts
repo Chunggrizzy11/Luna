@@ -35,12 +35,12 @@ describe('JournalService', () => {
   });
 
   it('returns an owner-only newest-first page with the requested inclusive dates', async () => {
-    model.find.mockReturnValueOnce(
-      query([
-        { date: '2026-03-03', mood: 'happy', note: 'newest' },
-        { date: '2026-03-02', discomfortLevel: 2 },
-      ]) as never,
-    );
+    const databaseQuery = query([
+      { date: '2026-03-03', mood: 'happy', note: 'newest' },
+      { date: '2026-03-02', discomfortLevel: 2 },
+      { date: '2026-03-01', mood: 'neutral' },
+    ]);
+    model.find.mockReturnValueOnce(databaseQuery as never);
 
     await expect(
       service.list(owner, {
@@ -56,11 +56,13 @@ describe('JournalService', () => {
       ],
       page: 2,
       limit: 2,
+      hasMore: true,
     });
     expect(model.find).toHaveBeenCalledWith({
       ownerDeviceId: owner.deviceId,
       date: { $gte: '2026-03-01', $lte: '2026-03-03' },
     });
+    expect(databaseQuery.limit).toHaveBeenCalledWith(3);
   });
 
   it('rejects partner journal access before querying', async () => {

@@ -24,12 +24,12 @@ class HealthRepository {
     },
   )).data;
 
-  Future<List<JournalEntry>> journal({
+  Future<JournalBatch> journal({
     DateTime? from,
     DateTime? to,
     int page = 1,
     int limit = 20,
-  }) async => (await _api.get<List<JournalEntry>>(
+  }) async => (await _api.get<JournalBatch>(
     ApiEndpoint.journal,
     queryParameters: {
       if (from != null) 'from': ApiDate.date(from),
@@ -37,11 +37,7 @@ class HealthRepository {
       'page': page,
       'limit': limit,
     },
-    decode: (value) => List.unmodifiable(
-      (_map(value)['items'] as List<Object?>).map(
-        (item) => JournalEntry.fromJson(item! as Map<String, dynamic>),
-      ),
-    ),
+    decode: (value) => JournalBatch.fromJson(_map(value)),
   )).data;
 }
 

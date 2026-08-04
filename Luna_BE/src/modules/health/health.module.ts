@@ -1,12 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { BusinessDateModule } from '../../common/date/business-date.module';
 import { CycleModule } from '../cycle/cycle.module';
 import { Cycle, CycleSchema } from '../cycle/schemas/cycle.schema';
 import { Device, DeviceSchema } from '../device/schemas/device.schema';
-import {
-  CARE_TODAY_PROVIDER,
-  CareSuggestionService,
-} from '../scheduler/care-suggestion.service';
+import { CareSuggestionService } from '../scheduler/care-suggestion.service';
 import { HealthController } from './health.controller';
 import { DashboardService } from './dashboard.service';
 import { DailyLogService } from './daily-log.service';
@@ -15,6 +13,7 @@ import { DailyLog, DailyLogSchema } from './schemas/daily-log.schema';
 
 @Module({
   imports: [
+    BusinessDateModule,
     CycleModule,
     MongooseModule.forFeature([
       { name: DailyLog.name, schema: DailyLogSchema },
@@ -28,10 +27,6 @@ import { DailyLog, DailyLogSchema } from './schemas/daily-log.schema';
     DashboardService,
     JournalService,
     CareSuggestionService,
-    {
-      provide: CARE_TODAY_PROVIDER,
-      useValue: () => new Date().toISOString().slice(0, 10),
-    },
   ],
   exports: [DailyLogService],
 })

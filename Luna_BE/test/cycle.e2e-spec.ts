@@ -1,4 +1,4 @@
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, type TestingModule } from '@nestjs/testing';
 import { MongoMemoryReplSet } from 'mongodb-memory-server';
@@ -290,6 +290,109 @@ describe('Cycle endpoints (e2e)', () => {
     expect(predecessor).toMatchObject({ cycleLength: expectedLength });
   });
 
+  it('rejects a backdated start against the latest completed lifecycle', async () => {
+    const ownerToken = await registerDevice('owner');
+    const server = app.getHttpServer();
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-04-01' })
+      .expect(201);
+    await request(server)
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-04-05' })
+      .expect(201);
+
+    const response = await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-03-01' })
+      .expect(409);
+
+    expect(asObject(response.body as unknown).message).toBe(
+      'A new cycle must start after the latest cycle dates.',
+    );
+    const current = await request(server)
+      .get('/api/v1/cycles/current')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    expect(asObject(current.body as unknown).data).toBeNull();
+  });
+
+  it('starts a new series after a hiatus beyond 365 days', async () => {
+    const ownerToken = await registerDevice('owner');
+    const server = app.getHttpServer();
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2025-01-01' })
+      .expect(201);
+    await request(server)
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2025-01-05' })
+      .expect(201);
+
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-02-01' })
+      .expect(201);
+
+    const history = await request(server)
+      .get('/api/v1/cycles')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const items = asObject(asObject(history.body as unknown).data)
+      .items as Array<Record<string, unknown>>;
+    expect(items).toEqual([
+      expect.objectContaining({ startDate: '2026-02-01', endDate: null }),
+      expect.objectContaining({
+        startDate: '2025-01-01',
+        cycleLength: null,
+      }),
+    ]);
+  });
+
+  it('recovers an active cycle older than 90 days and permits the next lifecycle', async () => {
+    const ownerToken = await registerDevice('owner');
+    const server = app.getHttpServer();
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-01-01' })
+      .expect(201);
+
+    const recovered = await request(server)
+      .post('/api/v1/cycles/end')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-04-15' })
+      .expect(201);
+    expect(asObject(recovered.body as unknown).data).toMatchObject({
+      startDate: '2026-01-01',
+      endDate: '2026-04-15',
+      periodLength: null,
+    });
+
+    await request(server)
+      .post('/api/v1/cycles/start')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .send({ date: '2026-04-16' })
+      .expect(201);
+    const history = await request(server)
+      .get('/api/v1/cycles')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+    const items = asObject(asObject(history.body as unknown).data)
+      .items as Array<Record<string, unknown>>;
+    expect(items[1]).toMatchObject({
+      startDate: '2026-01-01',
+      periodLength: null,
+      cycleLength: 105,
+    });
+  });
+
   it('leaves no active reservation when predecessor update and legacy cleanup both fail', async () => {
     const ownerToken = await registerDevice('owner');
     const server = app.getHttpServer();
@@ -314,15 +417,22 @@ describe('Cycle endpoints (e2e)', () => {
     const deleteSpy = jest.spyOn(cycleModel, 'deleteOne').mockReturnValueOnce({
       exec: jest.fn().mockRejectedValue(deleteFailure),
     } as never);
+    const loggerSpy = jest
+      .spyOn(Logger.prototype, 'error')
+      .mockImplementation(() => undefined);
     try {
       await request(server)
         .post('/api/v1/cycles/start')
         .set('Authorization', `Bearer ${ownerToken}`)
         .send({ date: '2026-02-01' })
         .expect(500);
+      expect(loggerSpy).toHaveBeenCalledWith(
+        'Unhandled HTTP 500: predecessor write failed',
+      );
     } finally {
       updateSpy.mockRestore();
       deleteSpy.mockRestore();
+      loggerSpy.mockRestore();
     }
 
     const current = await request(server)

@@ -9,6 +9,7 @@ import 'package:integration_test/integration_test.dart';
 import 'package:luna_fe/app.dart';
 import 'package:luna_fe/core/config/app_initializer.dart';
 import 'package:luna_fe/core/storage/secure_storage_service.dart';
+import 'package:luna_fe/core/time/business_date_clock.dart';
 import 'package:luna_fe/features/health/presentation/health_providers.dart';
 
 void main() {
@@ -31,7 +32,11 @@ void main() {
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
-            clockProvider.overrideWithValue(() => DateTime(2025, 2, 14)),
+            businessDateClockProvider.overrideWithValue(
+              BangkokBusinessDateClock(
+                instantClock: () => DateTime.utc(2025, 2, 14),
+              ),
+            ),
           ],
           child: LunaApp(config: config),
         ),
@@ -311,6 +316,7 @@ class _CycleJournalFakeServer {
     return <String, Object?>{
       'page': 1,
       'limit': 20,
+      'hasMore': false,
       'items': <Map<String, Object?>>[
         if (_mood != null || _symptoms.isNotEmpty || _note != null)
           <String, Object?>{

@@ -93,7 +93,7 @@ class CyclePage extends ConsumerWidget {
     );
     if (!confirmed) return;
     if (!context.mounted) return;
-    final date = ref.read(clockProvider)();
+    final date = ref.read(businessDateClockProvider).today();
     final controller = ref.read(cycleControllerProvider.notifier);
     if (start) {
       await controller.start(date);

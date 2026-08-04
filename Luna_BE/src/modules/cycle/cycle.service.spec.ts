@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   ConflictException,
   ForbiddenException,
   NotFoundException,
@@ -120,8 +119,12 @@ describe('CycleService', () => {
     );
   });
 
-  it('derives the immediately preceding ended cycle length from start dates', async () => {
-    const previous = { _id: 'previous', startDate: '2026-02-01' };
+  it('derives the latest ended cycle length from start dates', async () => {
+    const previous = {
+      _id: 'previous',
+      startDate: '2026-02-01',
+      endDate: '2026-02-05',
+    };
     model.findOne.mockReturnValueOnce(query(null) as never);
     model.findOne.mockReturnValueOnce(query(previous) as never);
     model.findOneAndUpdate.mockReturnValueOnce(query(previous) as never);
@@ -137,6 +140,9 @@ describe('CycleService', () => {
 
     await service.start(owner, '2026-03-01');
 
+    expect(model.findOne).toHaveBeenNthCalledWith(2, {
+      ownerDeviceId: owner.deviceId,
+    });
     expect(model.findOneAndUpdate).toHaveBeenCalledWith(
       { _id: 'previous', ownerDeviceId: owner.deviceId },
       { cycleLength: 28 },
@@ -144,20 +150,53 @@ describe('CycleService', () => {
     );
   });
 
-  it('rejects a derived cycle length beyond the reviewed 365-day bound before reserving an active cycle', async () => {
+  it('starts a new series after a hiatus beyond 365 days without updating the predecessor length', async () => {
     model.findOne.mockReturnValueOnce(query(null) as never);
     model.findOne.mockReturnValueOnce(
-      query({ _id: 'previous', startDate: '2025-01-01' }) as never,
+      query({
+        _id: 'previous',
+        startDate: '2025-01-01',
+        endDate: '2025-01-05',
+        cycleLength: null,
+      }) as never,
     );
-
-    await expect(service.start(owner, '2026-02-01')).rejects.toMatchObject({
-      response: {
-        message: 'Derived cycle length must be between 1 and 365 days.',
+    model.create.mockResolvedValue([
+      {
+        _id: 'new',
+        ownerDeviceId: owner.deviceId,
+        startDate: '2026-02-01',
+        endDate: null,
+        source: 'manual',
       },
-    } satisfies BadRequestException);
-    expect(model.create).not.toHaveBeenCalled();
+    ] as never);
+
+    await expect(service.start(owner, '2026-02-01')).resolves.toMatchObject({
+      startDate: '2026-02-01',
+      endDate: null,
+    });
     expect(model.findOneAndUpdate).not.toHaveBeenCalled();
   });
+
+  it.each(['2026-03-01', '2026-04-01', '2026-04-05'])(
+    'rejects out-of-order start %s against the latest completed cycle',
+    async (startDate) => {
+      model.findOne.mockReturnValueOnce(query(null) as never);
+      model.findOne.mockReturnValueOnce(
+        query({
+          _id: 'latest',
+          startDate: '2026-04-01',
+          endDate: '2026-04-05',
+        }) as never,
+      );
+
+      await expect(service.start(owner, startDate)).rejects.toMatchObject({
+        response: {
+          message: 'A new cycle must start after the latest cycle dates.',
+        },
+      } satisfies ConflictException);
+      expect(model.create).not.toHaveBeenCalled();
+    },
+  );
 
   it('aborts the transactional start without a best-effort cleanup if the predecessor update fails', async () => {
     const previous = { _id: 'previous', startDate: '2026-02-01' };
@@ -194,6 +233,24 @@ describe('CycleService', () => {
       endDate: '2026-03-01',
       periodLength: 1,
     });
+  });
+
+  it('closes an active cycle beyond 90 days with a null abnormal period length', async () => {
+    const active = { _id: 'cycle-1', startDate: '2026-01-01' };
+    model.findOne.mockReturnValueOnce(query(active) as never);
+    model.findOneAndUpdate.mockReturnValueOnce(
+      query({ ...active, endDate: '2026-04-15', periodLength: null }) as never,
+    );
+
+    await expect(service.end(owner, '2026-04-15')).resolves.toMatchObject({
+      endDate: '2026-04-15',
+      periodLength: null,
+    });
+    expect(model.findOneAndUpdate).toHaveBeenCalledWith(
+      { _id: 'cycle-1', ownerDeviceId: owner.deviceId, endDate: null },
+      { endDate: '2026-04-15', periodLength: null },
+      expect.objectContaining({ runValidators: true }),
+    );
   });
 
   it('rejects ending a cycle before its start date', async () => {

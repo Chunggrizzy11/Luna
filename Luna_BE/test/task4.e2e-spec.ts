@@ -188,6 +188,7 @@ describe('Task 4 health query endpoints (e2e)', () => {
       ],
       page: 1,
       limit: 1,
+      hasMore: false,
     });
     await request(app.getHttpServer())
       .get('/api/v1/calendar?month=2026-03')
@@ -197,6 +198,58 @@ describe('Task 4 health query endpoints (e2e)', () => {
       .get('/api/v1/health/journal')
       .set('Authorization', `Bearer ${partner}`)
       .expect(403);
+  });
+
+  it('paginates more than twenty journal entries newest-first without duplicates', async () => {
+    const owner = await register('owner');
+    const ownerId = await deviceId(owner);
+    await dailyLogModel.insertMany(
+      Array.from({ length: 25 }, (_, index) => ({
+        ownerDeviceId: ownerId,
+        date: `2026-03-${String(index + 1).padStart(2, '0')}`,
+        note: `entry-${index + 1}`,
+      })),
+    );
+
+    const first = data(
+      (
+        await request(app.getHttpServer())
+          .get('/api/v1/health/journal?page=1&limit=20')
+          .set('Authorization', `Bearer ${owner}`)
+          .expect(200)
+      ).body,
+    );
+    const second = data(
+      (
+        await request(app.getHttpServer())
+          .get('/api/v1/health/journal?page=2&limit=20')
+          .set('Authorization', `Bearer ${owner}`)
+          .expect(200)
+      ).body,
+    );
+    const firstItems = first.items as Array<Record<string, unknown>>;
+    const secondItems = second.items as Array<Record<string, unknown>>;
+
+    expect(first).toMatchObject({ page: 1, limit: 20, hasMore: true });
+    expect(second).toMatchObject({ page: 2, limit: 20, hasMore: false });
+    expect(firstItems).toHaveLength(20);
+    expect(secondItems).toHaveLength(5);
+    expect(firstItems.map((item) => item.date)).toEqual(
+      Array.from(
+        { length: 20 },
+        (_, index) => `2026-03-${String(25 - index).padStart(2, '0')}`,
+      ),
+    );
+    expect(secondItems.map((item) => item.date)).toEqual([
+      '2026-03-05',
+      '2026-03-04',
+      '2026-03-03',
+      '2026-03-02',
+      '2026-03-01',
+    ]);
+    expect(
+      new Set([...firstItems, ...secondItems].map((item) => item.date)).size,
+    ).toBe(25);
   });
 
   it('keeps guessed registration pair ids unpaired and only exposes an explicitly server-bound owner summary', async () => {

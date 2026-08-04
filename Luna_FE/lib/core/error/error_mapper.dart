@@ -55,7 +55,8 @@ abstract final class ErrorMapper {
     required String message,
     String? code,
   }) {
-    if (status == 401 || status == 403) return UnauthorizedFailure(message);
+    if (status == 401) return UnauthorizedFailure(message);
+    if (status == 403) return ForbiddenFailure(message);
     if (status != null && status >= 400 && status < 500) {
       return ValidationFailure(message, code: code);
     }

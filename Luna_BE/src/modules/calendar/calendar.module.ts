@@ -1,19 +1,18 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { BusinessDateModule } from '../../common/date/business-date.module';
 import { CycleModule } from '../cycle/cycle.module';
 import { Cycle, CycleSchema } from '../cycle/schemas/cycle.schema';
 import { CalendarController } from './calendar.controller';
-import { CALENDAR_NOW, CalendarService } from './calendar.service';
+import { CalendarService } from './calendar.service';
 
 @Module({
   imports: [
+    BusinessDateModule,
     CycleModule,
     MongooseModule.forFeature([{ name: Cycle.name, schema: CycleSchema }]),
   ],
   controllers: [CalendarController],
-  providers: [
-    CalendarService,
-    { provide: CALENDAR_NOW, useValue: () => new Date() },
-  ],
+  providers: [CalendarService],
 })
 export class CalendarModule {}

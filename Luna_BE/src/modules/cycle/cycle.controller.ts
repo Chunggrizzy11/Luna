@@ -2,13 +2,21 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiConflictResponse,
+  ApiCreatedResponse,
   ApiForbiddenResponse,
   ApiNotFoundResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { BusinessDateClock } from '../../common/date/business-date';
 import { CurrentDevice } from '../../common/decorators/current-device.decorator';
+import {
+  CycleEnvelopeDto,
+  CycleListEnvelopeDto,
+  CycleSummaryEnvelopeDto,
+  NullableCycleEnvelopeDto,
+} from '../../common/dto/owner-health-api-response.dto';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { CycleQueryDto, PredictionQueryDto } from './dto/cycle-query.dto';
 import { EndCycleDto } from './dto/end-cycle.dto';
@@ -19,10 +27,14 @@ import { CycleService } from './cycle.service';
 @ApiBearerAuth()
 @Controller('cycles')
 export class CycleController {
-  constructor(private readonly cycleService: CycleService) {}
+  constructor(
+    private readonly cycleService: CycleService,
+    private readonly businessDate: BusinessDateClock,
+  ) {}
 
   @Post('start')
   @ApiOperation({ summary: 'Start a menstrual cycle' })
+  @ApiCreatedResponse({ type: CycleEnvelopeDto })
   @ApiConflictResponse({ description: 'An active cycle already exists.' })
   @ApiForbiddenResponse({
     description: 'Partner devices cannot access cycles.',
@@ -36,6 +48,7 @@ export class CycleController {
 
   @Post('end')
   @ApiOperation({ summary: 'End the current menstrual cycle' })
+  @ApiCreatedResponse({ type: CycleEnvelopeDto })
   @ApiNotFoundResponse({ description: 'No active cycle exists.' })
   @ApiConflictResponse({
     description: 'The end date is before the start date.',
@@ -49,7 +62,10 @@ export class CycleController {
 
   @Get()
   @ApiOperation({ summary: 'List cycle history for the owner' })
-  @ApiOkResponse({ description: 'Newest-first, paginated cycle history.' })
+  @ApiOkResponse({
+    type: CycleListEnvelopeDto,
+    description: 'Newest-first, paginated cycle history.',
+  })
   @ApiForbiddenResponse({
     description: 'Partner devices cannot access cycles.',
   })
@@ -63,6 +79,7 @@ export class CycleController {
   @Get('current')
   @ApiOperation({ summary: 'Get the active cycle, or null when none exists' })
   @ApiOkResponse({
+    type: NullableCycleEnvelopeDto,
     description: 'Returns nullable data when no active cycle exists.',
   })
   @ApiForbiddenResponse({
@@ -74,6 +91,7 @@ export class CycleController {
 
   @Get('prediction')
   @ApiOperation({ summary: 'Calculate cycle predictions for a date' })
+  @ApiOkResponse({ type: CycleSummaryEnvelopeDto })
   @ApiForbiddenResponse({
     description: 'Partner devices cannot access cycles.',
   })
@@ -81,7 +99,7 @@ export class CycleController {
     @CurrentDevice() owner: AuthenticatedDevice,
     @Query() query: PredictionQueryDto,
   ) {
-    const today = query.today ?? new Date().toISOString().slice(0, 10);
+    const today = query.today ?? this.businessDate.today();
     return this.cycleService.prediction(owner, today);
   }
 }

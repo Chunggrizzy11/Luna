@@ -15,6 +15,7 @@ class AppIdentityState extends ChangeNotifier {
   DeviceIdentity? identity;
   StorageFailureReason? errorReason;
   bool isRetrying = false;
+  Future<void>? _revocation;
 
   static Future<AppIdentityState> initialize(
     SecureStorageService secureStorage,
@@ -37,6 +38,35 @@ class AppIdentityState extends ChangeNotifier {
     identity = value;
     status = AppIdentityStatus.present;
     errorReason = null;
+    notifyListeners();
+  }
+
+  Future<void> revokeIdentity() {
+    final pending = _revocation;
+    if (pending != null) return pending;
+    if (identity == null && status == AppIdentityStatus.missing) {
+      return Future<void>.value();
+    }
+
+    late final Future<void> operation;
+    operation = _clearRevokedIdentity().whenComplete(() {
+      if (identical(_revocation, operation)) _revocation = null;
+    });
+    _revocation = operation;
+    return operation;
+  }
+
+  Future<void> _clearRevokedIdentity() async {
+    try {
+      await _secureStorage.clearIdentity();
+      identity = null;
+      status = AppIdentityStatus.missing;
+      errorReason = null;
+    } on StorageException catch (error) {
+      identity = null;
+      status = AppIdentityStatus.error;
+      errorReason = error.reason;
+    }
     notifyListeners();
   }
 

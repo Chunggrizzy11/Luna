@@ -9,6 +9,7 @@ import 'package:luna_fe/features/calendar/domain/cycle_calendar.dart';
 import 'package:luna_fe/features/cycle/presentation/cycle_controller.dart';
 import 'package:luna_fe/features/health/domain/health_models.dart';
 import 'package:luna_fe/features/health/presentation/health_providers.dart';
+import 'package:luna_fe/features/health/presentation/journal_controller.dart';
 import 'package:luna_fe/features/home/presentation/owner_shell.dart';
 import 'package:luna_fe/features/partner/presentation/partner_pending_page.dart';
 import 'package:luna_fe/shared/entities/device_identity.dart';
@@ -42,7 +43,16 @@ void main() {
         overrides: [
           dashboardProvider.overrideWith((ref) async => _dashboard),
           careTodayProvider.overrideWith((ref) async => null),
-          journalProvider.overrideWith((ref) async => []),
+          journalProvider.overrideWith(
+            (ref) => JournalController(
+              loadPage: (_, limit) async => JournalBatch(
+                items: const [],
+                page: 1,
+                limit: limit,
+                hasMore: false,
+              ),
+            ),
+          ),
           currentCycleProvider.overrideWith((ref) async => null),
           calendarProvider.overrideWith(
             (ref, month) async => CycleCalendar(month: month, days: const []),

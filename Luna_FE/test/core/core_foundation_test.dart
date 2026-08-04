@@ -39,22 +39,33 @@ void main() {
     expect(response.timestamp, DateTime.utc(2026, 7, 31));
   });
 
-  test('error mapper distinguishes unauthorized and timeout failures', () {
-    final unauthorized = DioException(
-      requestOptions: RequestOptions(path: '/devices/me'),
-      response: Response<void>(
+  test(
+    'error mapper distinguishes unauthorized forbidden and timeout failures',
+    () {
+      final unauthorized = DioException(
         requestOptions: RequestOptions(path: '/devices/me'),
-        statusCode: 401,
-      ),
-    );
-    final timeout = DioException.connectionTimeout(
-      timeout: const Duration(seconds: 15),
-      requestOptions: RequestOptions(path: '/devices/me'),
-    );
+        response: Response<void>(
+          requestOptions: RequestOptions(path: '/devices/me'),
+          statusCode: 401,
+        ),
+      );
+      final forbidden = DioException(
+        requestOptions: RequestOptions(path: '/cycles'),
+        response: Response<void>(
+          requestOptions: RequestOptions(path: '/cycles'),
+          statusCode: 403,
+        ),
+      );
+      final timeout = DioException.connectionTimeout(
+        timeout: const Duration(seconds: 15),
+        requestOptions: RequestOptions(path: '/devices/me'),
+      );
 
-    expect(ErrorMapper.map(unauthorized), isA<UnauthorizedFailure>());
-    expect(ErrorMapper.map(timeout), isA<NetworkFailure>());
-  });
+      expect(ErrorMapper.map(unauthorized), isA<UnauthorizedFailure>());
+      expect(ErrorMapper.map(forbidden), isA<ForbiddenFailure>());
+      expect(ErrorMapper.map(timeout), isA<NetworkFailure>());
+    },
+  );
 
   test('cache expires values using its injected clock', () async {
     var now = DateTime(2026, 7, 31, 10);

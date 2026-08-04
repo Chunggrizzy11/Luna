@@ -1,6 +1,18 @@
 import { Controller, Get, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiExtraModels,
+  ApiOkResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { CurrentDevice } from '../../common/decorators/current-device.decorator';
+import {
+  CareEnvelopeDto,
+  DashboardEnvelopeDto,
+  JournalEnvelopeDto,
+  OwnerDashboardDto,
+  PartnerDashboardDto,
+} from '../../common/dto/owner-health-api-response.dto';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { CareSuggestionService } from '../scheduler/care-suggestion.service';
 import { DashboardService } from './dashboard.service';
@@ -10,6 +22,7 @@ import { JournalService } from './journal.service';
 
 @ApiTags('health')
 @ApiBearerAuth()
+@ApiExtraModels(OwnerDashboardDto, PartnerDashboardDto)
 @Controller('health')
 export class HealthController {
   constructor(
@@ -19,6 +32,7 @@ export class HealthController {
   ) {}
 
   @Get('dashboard')
+  @ApiOkResponse({ type: DashboardEnvelopeDto })
   dashboard(
     @CurrentDevice() device: AuthenticatedDevice,
     @Query() query: DashboardQueryDto,
@@ -27,11 +41,13 @@ export class HealthController {
   }
 
   @Get('care/today')
+  @ApiOkResponse({ type: CareEnvelopeDto })
   careToday(@CurrentDevice() device: AuthenticatedDevice) {
     return this.careSuggestionService.getToday(device);
   }
 
   @Get('journal')
+  @ApiOkResponse({ type: JournalEnvelopeDto })
   journal(
     @CurrentDevice() owner: AuthenticatedDevice,
     @Query() query: JournalQueryDto,

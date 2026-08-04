@@ -160,6 +160,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
       message: 'Tâm trạng và triệu chứng vẫn được giữ lại.',
       confirmLabel: 'Xóa',
     );
+    if (!mounted) return;
     if (confirmed) await widget.onDeleteNote();
   }
 }

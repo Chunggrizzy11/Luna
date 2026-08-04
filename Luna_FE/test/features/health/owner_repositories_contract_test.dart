@@ -27,8 +27,8 @@ void main() {
           }),
           ('POST', '/cycles/end') => _envelope({
             'startDate': '2026-08-03',
-            'endDate': '2026-08-05',
-            'periodLength': 3,
+            'endDate': '2026-11-05',
+            'periodLength': null,
             'source': 'manual',
           }),
           _ => throw StateError('${request.method} ${request.path}'),
@@ -41,7 +41,8 @@ void main() {
       final ended = await repository.end(DateTime(2026, 8, 5));
 
       expect(started.startDate, DateTime(2026, 8, 3));
-      expect(ended.periodLength, 3);
+      expect(ended.endDate, DateTime(2026, 11, 5));
+      expect(ended.periodLength, isNull);
       expect(harness.requests.map((value) => value.path), [
         '/cycles/current',
         '/cycles/start',
@@ -210,6 +211,7 @@ void main() {
             ],
             'page': 1,
             'limit': 20,
+            'hasMore': false,
           }),
           _ => throw StateError('${request.method} ${request.path}'),
         },
@@ -222,7 +224,8 @@ void main() {
 
       expect(dashboard.date, DateTime(2026, 8, 3));
       expect(care?.id, 'owner-drink');
-      expect(journal.single.mood, Mood.happy);
+      expect(journal.items.single.mood, Mood.happy);
+      expect(journal.hasMore, isFalse);
       expect(harness.requests.first.queryParameters, {'date': '2026-08-03'});
       expect(harness.requests.last.queryParameters, {'page': 1, 'limit': 20});
       expect(harness.requests.map((value) => value.method), [

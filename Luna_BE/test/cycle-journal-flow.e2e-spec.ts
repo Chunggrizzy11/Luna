@@ -211,6 +211,7 @@ describe('Cycle and journal flow (e2e)', () => {
     expect(expectEnvelope(journal.body).data).toEqual({
       page: 1,
       limit: 20,
+      hasMore: false,
       items: [
         {
           date,

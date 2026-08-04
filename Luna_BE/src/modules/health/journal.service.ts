@@ -30,6 +30,7 @@ export interface JournalResponse {
   }>;
   page: number;
   limit: number;
+  hasMore: boolean;
 }
 
 @Injectable()
@@ -67,15 +68,20 @@ export class JournalService {
       ownerDeviceId: owner.deviceId,
       ...(Object.keys(date).length > 0 ? { date } : {}),
     };
-    const items = await this.dailyLogModel
+    const records = await this.dailyLogModel
       .find(filter)
       .select('date mood symptoms discomfortLevel note -_id')
       .sort({ date: -1, _id: -1 })
       .skip((page - 1) * limit)
-      .limit(limit)
+      .limit(limit + 1)
       .lean()
       .exec();
-    return { items, page, limit };
+    return {
+      items: records.slice(0, limit),
+      page,
+      limit,
+      hasMore: records.length > limit,
+    };
   }
 
   private assertDateOnly(value: string): string {
