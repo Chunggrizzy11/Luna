@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_button.dart';
-import '../../../core/widgets/app_dialog.dart';
+import '../../../core/widgets/app_modal.dart';
 import '../../mood/domain/mood.dart';
 import '../../symptom/domain/symptom.dart';
 import '../domain/health_models.dart';
@@ -154,7 +154,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
   }
 
   Future<void> _delete() async {
-    final confirmed = await AppDialog.confirm(
+    final confirmed = await AppModal.confirm(
       context,
       title: 'Xóa ghi chú?',
       message: 'Tâm trạng và triệu chứng vẫn được giữ lại.',

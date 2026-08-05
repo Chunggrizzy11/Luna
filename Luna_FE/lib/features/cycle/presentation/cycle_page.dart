@@ -84,7 +84,7 @@ class CyclePage extends ConsumerWidget {
     WidgetRef ref, {
     required bool start,
   }) async {
-    final confirmed = await AppDialog.confirm(
+    final confirmed = await AppModal.confirm(
       context,
       title: start ? 'Xác nhận bắt đầu kỳ kinh?' : 'Xác nhận kết thúc kỳ kinh?',
       message: start
