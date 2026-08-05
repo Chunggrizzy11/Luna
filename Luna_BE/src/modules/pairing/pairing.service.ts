@@ -52,6 +52,16 @@ export class PairingService {
       throw new ForbiddenException('Only the owner can generate pairing codes.');
     }
 
+    // Check if owner already has a partner (1-1 constraint)
+    const ownerPartnerCount = await this.deviceModel.countDocuments({
+      pairedOwnerDeviceId: owner.deviceId,
+      role: DeviceRole.PARTNER,
+      status: DeviceStatus.ACTIVE,
+    });
+    if (ownerPartnerCount >= 1) {
+      throw new ConflictException('You are already paired with a partner.');
+    }
+
     // Invalidate any existing active codes for this owner
     await this.pairingCodeModel.updateMany(
       { ownerDeviceId: owner.deviceId, used: false, expiresAt: { $gt: new Date() } },
@@ -123,6 +133,16 @@ export class PairingService {
     });
     if (existingPartner?.pairedOwnerDeviceId) {
       throw new ConflictException('Partner is already paired with another owner.');
+    }
+
+    // Check if owner already has a partner (1-1 constraint)
+    const ownerPartnerCount = await this.deviceModel.countDocuments({
+      pairedOwnerDeviceId: String(owner._id),
+      role: DeviceRole.PARTNER,
+      status: DeviceStatus.ACTIVE,
+    });
+    if (ownerPartnerCount >= 1) {
+      throw new ConflictException('Owner is already paired with a partner.');
     }
 
     // Increment attempts atomically and check

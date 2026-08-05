@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../features/home/presentation/owner_shell.dart';
 import '../../features/notification/presentation/notification_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
+import '../../features/partner/data/partner_repository.dart';
 import '../../features/partner/presentation/join_pairing_page.dart';
 import '../../features/partner/presentation/partner_pending_page.dart';
 import '../../features/partner/presentation/pairing_page.dart';
@@ -48,6 +49,18 @@ class AppRouter {
             path: AppRoutes.home,
             builder: (context, state) =>
                 homeForIdentity(config.identityState.identity),
+          ),
+          GoRoute(
+            path: AppRoutes.pairing,
+            builder: (context, state) => PairingPage(
+              repository: PartnerRepository(config.apiClient),
+            ),
+          ),
+          GoRoute(
+            path: AppRoutes.joinPairing,
+            builder: (context, state) => JoinPairingPage(
+              repository: PartnerRepository(config.apiClient),
+            ),
           ),
           GoRoute(
             path: AppRoutes.notifications,

@@ -40,13 +40,9 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
       CyclePage(onGoHome: goHome),
       NotificationPage(onGoHome: goHome),
     ];
-    return Container(
-      decoration: BoxDecoration(
-        gradient: AppColor.pageGradient(Theme.of(context).brightness),
-      ),
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: IndexedStack(index: _index, children: pages),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
@@ -82,7 +78,7 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
           ),
         ],
       ),
-    ));
+    );
   }
 
   Future<void> _openLog(DateTime date) async {
