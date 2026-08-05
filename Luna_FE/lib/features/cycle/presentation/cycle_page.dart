@@ -13,7 +13,8 @@ import '../../health/presentation/health_providers.dart';
 import 'cycle_controller.dart';
 
 class CyclePage extends ConsumerWidget {
-  const CyclePage({super.key});
+  const CyclePage({this.onGoHome, super.key});
+  final VoidCallback? onGoHome;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -27,7 +28,15 @@ class CyclePage extends ConsumerWidget {
       }
     });
     return Scaffold(
-      appBar: AppBar(title: const Text('Chu kỳ của bạn')),
+      appBar: AppBar(
+        leading: onGoHome != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: onGoHome,
+              )
+            : null,
+        title: const Text('Chu kỳ của bạn'),
+      ),
       body: current.when(
         loading: () => const AppLoading(label: 'Đang tải chu kỳ'),
         error: (error, _) => AppError(

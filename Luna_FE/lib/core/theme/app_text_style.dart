@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 /// Friendly Design System - Typography Tokens
 /// Based on: E:/DesignSkillAI/friendly/typography.md
-/// Font: Public Sans (Assumes added to pubspec.yaml)
+/// Font: Public Sans (using google_fonts)
 
 abstract final class AppTextStyle {
-  static const String fontFamily = 'PublicSans';
+  static String? get fontFamily => GoogleFonts.publicSans().fontFamily;
 
   // ============================================
   // HEADING SCALE (Desktop values)

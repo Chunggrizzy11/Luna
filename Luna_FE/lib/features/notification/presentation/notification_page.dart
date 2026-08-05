@@ -7,7 +7,8 @@ import '../domain/notification_models.dart';
 import 'notification_providers.dart';
 
 class NotificationPage extends ConsumerWidget {
-  const NotificationPage({super.key});
+  const NotificationPage({this.onGoHome, super.key});
+  final VoidCallback? onGoHome;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -16,6 +17,12 @@ class NotificationPage extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
+        leading: onGoHome != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: onGoHome,
+              )
+            : null,
         title: const Text('Trung tâm thông báo'),
         actions: [
           IconButton(

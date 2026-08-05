@@ -12,9 +12,10 @@ import '../domain/cycle_calendar.dart';
 import '../../health/presentation/health_providers.dart';
 
 class CycleCalendarPage extends ConsumerStatefulWidget {
-  const CycleCalendarPage({this.initialMonth, this.onDayTap, super.key});
+  const CycleCalendarPage({this.initialMonth, this.onDayTap, this.onGoHome, super.key});
   final DateTime? initialMonth;
   final ValueChanged<DateTime>? onDayTap;
+  final VoidCallback? onGoHome;
 
   @override
   ConsumerState<CycleCalendarPage> createState() => _CycleCalendarPageState();
@@ -36,7 +37,15 @@ class _CycleCalendarPageState extends ConsumerState<CycleCalendarPage> {
     final today = ref.watch(localDayProvider);
     final state = ref.watch(calendarProvider(_month));
     return Scaffold(
-      appBar: AppBar(title: const Text('Lịch chu kỳ')),
+      appBar: AppBar(
+        leading: widget.onGoHome != null
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: widget.onGoHome,
+              )
+            : null,
+        title: const Text('Lịch chu kỳ'),
+      ),
       body: state.when(
         loading: () => const AppLoading(label: 'Đang tải lịch'),
         error: (error, _) => AppError(

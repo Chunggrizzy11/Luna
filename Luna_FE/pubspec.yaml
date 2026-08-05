@@ -48,6 +48,7 @@ dependencies:
   fl_chart: ^1.2.0
   equatable: ^2.1.0
   json_annotation: ^4.12.0
+  google_fonts: ^8.2.1
 
 dev_dependencies:
   flutter_test:
@@ -76,13 +77,6 @@ flutter:
   # the material Icons class.
   uses-material-design: true
 
-  assets:
-    - lib/assets/icons/
-    - lib/assets/images/
-    - lib/assets/animations/
-    - lib/assets/fonts/
-    - lib/assets/translations/
-
   # To add assets to your application, add an assets section, like this:
   # assets:
   #   - images/a_dot_burr.jpeg
@@ -93,12 +87,3 @@ flutter:
 
   # For details regarding adding assets from package dependencies, see
   # https://flutter.dev/to/asset-from-package
-
-  fonts:
-    - family: PublicSans
-      fonts:
-        - asset: lib/assets/fonts/PublicSans-Regular.ttf
-        - asset: lib/assets/fonts/PublicSans-Medium.ttf
-          weight: 500
-        - asset: lib/assets/fonts/PublicSans-Bold.ttf
-          weight: 700

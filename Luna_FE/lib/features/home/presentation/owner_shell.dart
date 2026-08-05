@@ -27,19 +27,25 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
   @override
   Widget build(BuildContext context) {
     final unreadCount = ref.watch(unreadCountProvider);
+    void goHome() => setState(() => _index = 0);
     final pages = [
       HomePage(
         onOpenDailyLog: () =>
             _openLog(ref.read(businessDateClockProvider).today()),
         onOpenCycle: () => setState(() => _index = 3),
       ),
-      CycleCalendarPage(onDayTap: _openLog),
-      HealthJournalPage(onEntryTap: _openLog),
-      const CyclePage(),
-      const NotificationPage(),
+      CycleCalendarPage(onDayTap: _openLog, onGoHome: goHome),
+      HealthJournalPage(onEntryTap: _openLog, onGoHome: goHome),
+      CyclePage(onGoHome: goHome),
+      NotificationPage(onGoHome: goHome),
     ];
-    return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: AppColor.pageGradient(Theme.of(context).brightness),
+      ),
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: IndexedStack(index: _index, children: pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _index,
         onDestinationSelected: (value) => setState(() => _index = value),
