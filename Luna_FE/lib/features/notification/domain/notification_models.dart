@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
 
-export enum NotificationType {
+enum NotificationType {
   cycleReminder('Chu kỳ bắt đầu'),
   careSuggestion('Gợi ý chăm sóc'),
   journalPrompt('Nhắc nhở nhật ký'),

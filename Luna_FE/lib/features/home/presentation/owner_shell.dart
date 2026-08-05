@@ -35,7 +35,7 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
       CycleCalendarPage(onDayTap: _openLog),
       HealthJournalPage(onEntryTap: _openLog),
       const CyclePage(),
-      const NotificationPage(),
+      NotificationPage(),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
