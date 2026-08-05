@@ -31,7 +31,7 @@ abstract final class LightTheme {
     // ============================================
     // SURFACE
     // ============================================
-    scaffoldBackgroundColor: AppColor.lightSurface,
+    scaffoldBackgroundColor: Colors.transparent,
 
     // ============================================
     // EXTENSIONS
@@ -56,6 +56,7 @@ abstract final class LightTheme {
     cardTheme: const CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(48))),
+      color: AppColor.neutralPrimarySoftLight,
     ),
 
     // ============================================
@@ -69,7 +70,7 @@ abstract final class LightTheme {
     // APP BAR THEME
     // ============================================
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColor.lightSurface,
+      backgroundColor: Colors.transparent,
       foregroundColor: AppColor.neutralPrimaryDark,
       elevation: 0,
     ),

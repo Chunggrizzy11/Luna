@@ -81,7 +81,7 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
           ),
         ],
       ),
-    );
+    ));
   }
 
   Future<void> _openLog(DateTime date) async {
