@@ -17,6 +17,7 @@ class AppButton extends StatelessWidget {
     this.variant = ButtonVariant.brand,
     this.size = ButtonSize.base,
     this.disabled = false,
+    this.fullWidth = true,
     super.key,
   });
 
@@ -27,6 +28,7 @@ class AppButton extends StatelessWidget {
   final ButtonVariant variant;
   final ButtonSize size;
   final bool disabled;
+  final bool fullWidth;
 
   @override
   Widget build(BuildContext context) {
@@ -69,7 +71,7 @@ class AppButton extends StatelessWidget {
       enabled: effectiveOnPressed != null,
       label: label,
       child: SizedBox(
-        width: double.infinity,
+        width: fullWidth ? double.infinity : null,
         child: AnimatedScale(
           scale: 1.0,
           duration: const Duration(milliseconds: 200),

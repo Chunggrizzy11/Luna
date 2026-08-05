@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_color.dart';
 import 'app_radius.dart';
@@ -41,14 +42,14 @@ abstract final class LightTheme {
     // ============================================
     // TEXT THEME (Friendly Typography)
     // ============================================
-    textTheme: const TextTheme(
+    textTheme: GoogleFonts.publicSansTextTheme(const TextTheme(
       displaySmall: AppTextStyle.displaySmall,
       titleLarge: AppTextStyle.titleLarge,
       bodyLarge: AppTextStyle.bodyLarge,
       labelLarge: AppTextStyle.buttonLabel,
       titleMedium: AppTextStyle.titleMedium,
       titleSmall: AppTextStyle.titleSmall,
-    ),
+    )),
 
     // ============================================
     // CARD THEME (Friendly Card)

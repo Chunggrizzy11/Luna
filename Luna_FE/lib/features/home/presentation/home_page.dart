@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/error/failure.dart';
 import '../../../core/theme/app_spacing.dart';
+import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_error.dart';
 import '../../../core/widgets/app_loading.dart';
@@ -80,10 +81,13 @@ class HomePage extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: AppButton(
+        fullWidth: false,
+        size: ButtonSize.large,
         onPressed: onOpenDailyLog,
-        icon: const Icon(Icons.edit_note),
-        label: const Text('Ghi hôm nay'),
+        icon: Icons.edit_note,
+        label: 'Ghi hôm nay',
+        variant: ButtonVariant.brand,
       ),
     );
   }
@@ -95,6 +99,7 @@ class _CycleOverview extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => AppCard(
+    backgroundIndex: 0,
     onTap: onTap,
     child: Row(
       children: [
@@ -153,6 +158,7 @@ class _DailyCard extends StatelessWidget {
   final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => AppCard(
+    backgroundIndex: 1,
     onTap: onTap,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,6 +188,7 @@ class _CareCard extends StatelessWidget {
   final AsyncValue<CareSuggestion?> state;
   @override
   Widget build(BuildContext context) => AppCard(
+    backgroundIndex: 2,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

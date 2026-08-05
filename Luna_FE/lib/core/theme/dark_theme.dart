@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'app_color.dart';
 import 'app_radius.dart';
@@ -31,7 +32,7 @@ abstract final class DarkTheme {
     // ============================================
     // SURFACE
     // ============================================
-    scaffoldBackgroundColor: AppColor.darkSurface,
+    scaffoldBackgroundColor: Colors.transparent,
 
     // ============================================
     // EXTENSIONS
@@ -41,14 +42,14 @@ abstract final class DarkTheme {
     // ============================================
     // TEXT THEME (Friendly Typography)
     // ============================================
-    textTheme: const TextTheme(
+    textTheme: GoogleFonts.publicSansTextTheme(const TextTheme(
       displaySmall: AppTextStyle.displaySmall,
       titleLarge: AppTextStyle.titleLarge,
       bodyLarge: AppTextStyle.bodyLarge,
       labelLarge: AppTextStyle.buttonLabel,
       titleMedium: AppTextStyle.titleMedium,
       titleSmall: AppTextStyle.titleSmall,
-    ),
+    )),
 
     // ============================================
     // CARD THEME (Friendly Card)
@@ -56,6 +57,7 @@ abstract final class DarkTheme {
     cardTheme: const CardThemeData(
       elevation: 0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(48))),
+      color: AppColor.neutralPrimarySoftDark,
     ),
 
     // ============================================
@@ -69,7 +71,7 @@ abstract final class DarkTheme {
     // APP BAR THEME
     // ============================================
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColor.darkSurface,
+      backgroundColor: Colors.transparent,
       foregroundColor: AppColor.neutralPrimaryLight,
       elevation: 0,
     ),
