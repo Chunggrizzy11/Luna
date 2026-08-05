@@ -13,12 +13,12 @@ class DioClient {
   DioClient({
     required TokenProvider tokenProvider,
     UnauthorizedHandler? onUnauthorized,
-    String baseUrl = Env.apiBaseUrl,
+    String? baseUrl,
     LogSink? logSink,
     bool enableLogging = true,
   }) : dio = Dio(
          BaseOptions(
-           baseUrl: baseUrl,
+           baseUrl: baseUrl ?? Env.apiBaseUrl,
            connectTimeout: AppConstant.networkTimeout,
            receiveTimeout: AppConstant.networkTimeout,
            sendTimeout: AppConstant.networkTimeout,
