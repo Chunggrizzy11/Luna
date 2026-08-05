@@ -18,6 +18,7 @@ abstract final class ApiEndpoint {
   static String mood(String date) => '/moods/$date';
   static String symptoms(String date) => '/symptoms/$date';
   static String note(String date) => '/notes/$date';
+  static String deleteJournal(String date) => '/health/journal/$date';
 
   static const publicPaths = <String>{registerDevice};
 }

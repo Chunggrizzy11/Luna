@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../core/config/app_identity_state.dart';
 import '../../../core/error/failure.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_button.dart';
@@ -21,7 +22,15 @@ class HomePage extends ConsumerWidget {
     final dashboard = ref.watch(dashboardProvider);
     final care = ref.watch(careTodayProvider);
     return Scaffold(
-      appBar: AppBar(title: const Text('Luna của bạn')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            ref.read(appIdentityStateProvider).revokeIdentity();
+          },
+        ),
+        title: const Text('Luna của bạn'),
+      ),
       body: dashboard.when(
         loading: () => const AppLoading(label: 'Đang tải tổng quan'),
         error: (error, _) => AppError(

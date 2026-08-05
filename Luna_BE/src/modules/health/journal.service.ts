@@ -84,6 +84,17 @@ export class JournalService {
     };
   }
 
+  async delete(owner: AuthenticatedDevice, date: string): Promise<void> {
+    if (owner.role !== DeviceRole.OWNER) {
+      throw new ForbiddenException('Only the owner can delete journal data.');
+    }
+    const normalizedDate = this.assertDateOnly(date);
+    await this.dailyLogModel.deleteOne({
+      ownerDeviceId: owner.deviceId,
+      date: normalizedDate,
+    }).exec();
+  }
+
   private assertDateOnly(value: string): string {
     const match = DATE_PATTERN.exec(value);
     if (!match) {

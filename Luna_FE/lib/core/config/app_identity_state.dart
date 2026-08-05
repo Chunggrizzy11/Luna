@@ -1,8 +1,14 @@
 import 'package:flutter/foundation.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../shared/entities/device_identity.dart';
 import '../error/exception.dart';
 import '../storage/secure_storage_service.dart';
+
+final appIdentityStateProvider = Provider<AppIdentityState>((ref) {
+  throw UnimplementedError('appIdentityStateProvider must be overridden');
+});
 
 enum AppIdentityStatus { missing, present, error }
 

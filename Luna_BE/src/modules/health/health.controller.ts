@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, Delete, Param } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiExtraModels,
@@ -53,5 +53,13 @@ export class HealthController {
     @Query() query: JournalQueryDto,
   ) {
     return this.journalService.list(owner, query);
+  }
+
+  @Delete('journal/:date')
+  delete(
+    @CurrentDevice() owner: AuthenticatedDevice,
+    @Param('date') date: string,
+  ) {
+    return this.journalService.delete(owner, date);
   }
 }

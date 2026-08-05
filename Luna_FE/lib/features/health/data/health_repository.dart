@@ -39,6 +39,13 @@ class HealthRepository {
     },
     decode: (value) => JournalBatch.fromJson(_map(value)),
   )).data;
+
+  Future<void> deleteJournalEntry(DateTime date) async {
+    await _api.delete<void>(
+      ApiEndpoint.deleteJournal(ApiDate.date(date)),
+      decode: (_) {},
+    );
+  }
 }
 
 Map<String, dynamic> _map(Object? value) {

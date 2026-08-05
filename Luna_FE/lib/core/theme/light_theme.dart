@@ -72,8 +72,15 @@ abstract final class LightTheme {
     // ============================================
     appBarTheme: const AppBarTheme(
       backgroundColor: Colors.transparent,
-      foregroundColor: AppColor.neutralPrimaryDark,
+      foregroundColor: Color(0xFF111827),
       elevation: 0,
+      surfaceTintColor: Colors.transparent,
+      titleTextStyle: TextStyle(
+        color: Color(0xFF111827),
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        height: 1.3,
+      ),
     ),
 
     // ============================================

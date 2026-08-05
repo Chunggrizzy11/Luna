@@ -105,6 +105,18 @@ class JournalController extends StateNotifier<JournalState> {
     }
   }
 
+  /// Remove a journal entry from local state by date (used after deletion)
+  void removeEntry(DateTime date) {
+    final key = _dateKey(date);
+    final filtered = state.items.where((e) => _dateKey(e.date) != key).toList();
+    state = JournalState(
+      items: List<JournalEntry>.unmodifiable(filtered),
+      isLoading: false,
+      hasMore: state.hasMore,
+      nextPage: state.nextPage,
+    );
+  }
+
   List<JournalEntry> _merge(
     List<JournalEntry> existing,
     List<JournalEntry> incoming,

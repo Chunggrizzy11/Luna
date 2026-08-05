@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/config/app_config.dart';
 import 'core/config/app_constant.dart';
+import 'core/config/app_identity_state.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'features/health/presentation/health_providers.dart';
@@ -17,7 +18,10 @@ class LunaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ProviderScope(
-    overrides: [apiClientProvider.overrideWithValue(config.apiClient)],
+    overrides: [
+      apiClientProvider.overrideWithValue(config.apiClient),
+      appIdentityStateProvider.overrideWithValue(config.identityState),
+    ],
     child: MaterialApp.router(
       title: AppConstant.appName,
       locale: const Locale(AppConstant.defaultLocale),

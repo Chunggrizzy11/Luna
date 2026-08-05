@@ -90,15 +90,19 @@ class HealthJournalPage extends ConsumerWidget {
               ),
             ) ?? false;
           },
-          onDismissed: (_) {
-            ref.read(dailyLogControllerProvider.notifier).deleteNote(item.date);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Đã xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
+          onDismissed: (_) async {
+            await ref.read(dailyLogControllerProvider.notifier).deleteEntry(item.date);
+            ref.read(journalProvider.notifier).removeEntry(item.date);
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    '✅ Đã xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
+                  ),
+                  backgroundColor: const Color(0xFF007A55),
                 ),
-              ),
-            );
+              );
+            }
           },
           child: Semantics(
             button: onEntryTap != null,
@@ -155,14 +159,18 @@ class HealthJournalPage extends ConsumerWidget {
                         ),
                       ) ?? false;
                       if (confirmed && context.mounted) {
-                        ref.read(dailyLogControllerProvider.notifier).deleteNote(item.date);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              'Đã xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
+                        await ref.read(dailyLogControllerProvider.notifier).deleteEntry(item.date);
+                        ref.read(journalProvider.notifier).removeEntry(item.date);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '✅ Đã xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
+                              ),
+                              backgroundColor: const Color(0xFF007A55),
                             ),
-                          ),
-                        );
+                          );
+                        }
                       }
                     },
                   ),

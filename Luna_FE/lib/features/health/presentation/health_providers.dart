@@ -105,12 +105,14 @@ final dailyLogControllerProvider =
       final moods = ref.watch(moodRepositoryProvider);
       final symptoms = ref.watch(symptomRepositoryProvider);
       final notes = ref.watch(noteRepositoryProvider);
+      final healthRepo = ref.watch(healthRepositoryProvider);
       return DailyLogController(
         onUpdateMood: (date, mood) async => moods.update(date, mood),
         onUpdateSymptoms: (date, values, discomfort) async =>
             symptoms.update(date, values, discomfort),
         onUpdateNote: (date, note) async => notes.update(date, note),
         onDeleteNote: (date) async => notes.delete(date),
+        onDeleteEntry: (date) async => healthRepo.deleteJournalEntry(date),
         onInvalidate: () => invalidateOwnerData(ref),
       );
     });

@@ -12,6 +12,7 @@ typedef UpdateSymptoms =
     );
 typedef UpdateNote = Future<void> Function(DateTime date, String note);
 typedef DeleteNote = Future<void> Function(DateTime date);
+typedef DeleteEntry = Future<void> Function(DateTime date);
 
 class DailyLogController extends StateNotifier<AsyncValue<void>> {
   DailyLogController({
@@ -19,6 +20,7 @@ class DailyLogController extends StateNotifier<AsyncValue<void>> {
     required this.onUpdateSymptoms,
     required this.onUpdateNote,
     required this.onDeleteNote,
+    required this.onDeleteEntry,
     required this.onInvalidate,
   }) : super(const AsyncData(null));
 
@@ -26,6 +28,7 @@ class DailyLogController extends StateNotifier<AsyncValue<void>> {
   final UpdateSymptoms onUpdateSymptoms;
   final UpdateNote onUpdateNote;
   final DeleteNote onDeleteNote;
+  final DeleteEntry onDeleteEntry;
   final void Function() onInvalidate;
 
   int _feedbackSession = 0;
@@ -45,6 +48,8 @@ class DailyLogController extends StateNotifier<AsyncValue<void>> {
   });
 
   Future<void> deleteNote(DateTime date) => _mutate(() => onDeleteNote(date));
+
+  Future<void> deleteEntry(DateTime date) => _mutate(() => onDeleteEntry(date));
 
   void startFeedbackSession() {
     _feedbackSession += 1;
