@@ -109,7 +109,7 @@ export class NotificationSchedulerService {
         await this.createReminder(
           ownerDeviceId,
           'Chu kỳ bắt đầu',
-          `Chu kỳ kinh nguyệt của bạn có thể đã bắt đầu! 📥️ Hôm nay là ngày ${daysInCycle} của chu kỳ.",
+          `Chu kỳ kinh nguyệt của bạn có thể đã bắt đầu! 📥️ Hôm nay là ngày ${daysInCycle} của chu kỳ.`,
           'cycle_reminder',
           { cycleStart: cycle.startDate, day: daysInCycle.toString() },
         );
@@ -119,7 +119,7 @@ export class NotificationSchedulerService {
         await this.createReminder(
           ownerDeviceId,
           'Dự kiến ngày đèn đỏ',
-          `Theo chu kỳ của bạn, ngày đèn đỏ dự kiến sẽ rơi vào khoảng ngày ${daysInCycle} (hoặc gần đây).",
+          `Theo chu kỳ của bạn, ngày đèn đỏ dự kiến sẽ rơi vào khoảng ngày ${daysInCycle} (hoặc gần đây).`,
           'cycle_reminder',
           { cycleStart: cycle.startDate, day: daysInCycle.toString() },
         );
@@ -140,7 +140,7 @@ export class NotificationSchedulerService {
     await this.createReminder(
       partnerDeviceId,
       'Gợi ý chăm sóc',
-      `Chuyên gia khuyên bạn: ${suggestion.suggestion.title} - ${suggestion.suggestion.description}",
+      `Chuyên gia khuyên bạn: ${suggestion.suggestion.title} - ${suggestion.suggestion.description}`,
       'care_suggestion',
       {
         suggestionId: suggestion.suggestion.id,
@@ -169,7 +169,7 @@ export class NotificationSchedulerService {
       await this.createReminder(
         ownerDeviceId,
         'Nhắc nhở nhật ký hàng ngày',
-        `Hôm nay bạn chưa ghi chép biểu đồ sức khỏe. Hãy ghi nhanh vài thông tin!",
+        `Hôm nay bạn chưa ghi chép biểu đồ sức khỏe. Hãy ghi nhanh vài thông tin!`,
         'journal_prompt',
         { date },
       );
