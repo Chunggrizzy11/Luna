@@ -1,6 +1,6 @@
 {
-    "name": "luna_fe",
-    "short_name": "luna_fe",
+    "name": "Luna",
+    "short_name": "Luna",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
