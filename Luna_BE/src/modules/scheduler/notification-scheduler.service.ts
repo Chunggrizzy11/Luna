@@ -27,24 +27,24 @@ export class NotificationSchedulerService {
     try {
       // Find all paired devices (owners)
       const owners = await this.deviceModel
-        .find({ role: 'owner', pairId: { $exists: true } })
+        .find({ role: 'owner', pairId: { $exists: true } } as any)
         .lean()
         .exec();
 
       for (const owner of owners) {
-        await this.checkOwnerCycleReminders(owner._id as string);
+        await this.checkOwnerCycleReminders(owner._id as unknown as string);
       }
     } catch (error) {
       this.logger.error('Failed to check cycle reminders', error);
     }
   }
 
-  @Cron(CronExpression.EVERY_6HOURS)
+  @Cron(CronExpression.EVERY_6_HOURS)
   async checkCareSuggestions(): Promise<void> {
     try {
       // Check all paired devices for care suggestions
       const owners = await this.deviceModel
-        .find({ role: 'owner', pairId: { $exists: true } })
+        .find({ role: 'owner', pairId: { $exists: true } } as any)
         .lean()
         .exec();
 
@@ -52,13 +52,13 @@ export class NotificationSchedulerService {
         const partner = await this.deviceModel.findOne({
           pairId: owner.pairId,
           role: 'partner',
-        });
+        } as any);
 
         if (!partner) continue;
 
         await this.checkCareSuggestion(
-          owner._id as string,
-          partner._id as string,
+          owner._id as unknown as string,
+          partner._id as unknown as string,
         );
       }
     } catch (error) {
@@ -71,13 +71,13 @@ export class NotificationSchedulerService {
     try {
       const today = new Date().toISOString().split('T')[0];
       const owners = await this.deviceModel
-        .find({ role: 'owner', pairId: { $exists: true } })
+        .find({ role: 'owner', pairId: { $exists: true } } as any)
         .lean()
         .exec();
 
       for (const owner of owners) {
         await this.checkDailyLogReminder(
-          owner._id as string,
+          owner._id as unknown as string,
           today,
         );
       }

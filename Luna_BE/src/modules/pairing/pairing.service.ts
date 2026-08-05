@@ -214,7 +214,7 @@ export class PairingService {
       return {
         isPaired: true,
         partnerName: partner.deviceName ?? 'Partner',
-        pairedAt: partner.createdAt?.toISOString(),
+        pairedAt: (partner as any).createdAt?.toISOString(),
       };
     } else {
       // Partner checking their status
@@ -240,7 +240,7 @@ export class PairingService {
       return {
         isPaired: true,
         partnerName: owner.deviceName ?? 'Partner',
-        pairedAt: owner.createdAt?.toISOString(),
+        pairedAt: (owner as any).createdAt?.toISOString(),
       };
     }
   }
