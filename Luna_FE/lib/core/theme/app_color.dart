@@ -10,6 +10,11 @@ abstract final class AppColor {
   // ============================================
 
   // Primary surfaces
+  static const Color white = Color(0xFFFFFFFF);
+  static const Color black = Color(0xFF000000);
+  static const Color borderDefaultLight = Color(0xFFE5E7EB);
+  static const Color borderDefaultDark = Color(0xFF333E4F);
+
   static const Color neutralPrimarySoftLight = Color(0xFFFFFFFF);
   static const Color neutralPrimarySoftDark = Color(0xFF101828);
   static const Color neutralPrimaryLight = Color(0xFFFFFFFF);

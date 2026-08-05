@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_color.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_text_style.dart';
+import 'app_button.dart';
 
 /// Friendly Design System - Modal/Dialog
 /// Spec: E:/DesignSkillAI/friendly/modals.md
@@ -59,7 +60,7 @@ class AppModal {
     IconData? icon,
     Color? iconColor,
     bool isDestructive = false,
-  }) {
+  }) async {
     final result = await show<bool>(
       context: context,
       title: _PopupTitle(

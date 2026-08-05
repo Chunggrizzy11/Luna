@@ -155,7 +155,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
 
   Future<void> _delete() async {
     final confirmed = await AppModal.confirm(
-      context,
+      context: context,
       title: 'Xóa ghi chú?',
       message: 'Tâm trạng và triệu chứng vẫn được giữ lại.',
       confirmLabel: 'Xóa',

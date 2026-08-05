@@ -6,6 +6,7 @@ import '../../../core/error/failure.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
+import '../../../core/widgets/app_modal.dart';
 import '../../../core/widgets/app_dialog.dart';
 import '../../../core/widgets/app_error.dart';
 import '../../../core/widgets/app_loading.dart';
@@ -85,7 +86,7 @@ class CyclePage extends ConsumerWidget {
     required bool start,
   }) async {
     final confirmed = await AppModal.confirm(
-      context,
+      context: context,
       title: start ? 'Xác nhận bắt đầu kỳ kinh?' : 'Xác nhận kết thúc kỳ kinh?',
       message: start
           ? 'Luna sẽ dùng hôm nay làm ngày đầu chu kỳ.'

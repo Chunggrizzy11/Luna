@@ -4,13 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../data/notification_repository.dart';
 import '../domain/notification_models.dart';
+import 'notification_providers.dart';
 
 class NotificationPage extends ConsumerWidget {
   const NotificationPage({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final repository = ref.watch(PartnerRepositoryProvider);
+    final repository = ref.watch(notificationRepositoryProvider);
     final notificationsAsync = ref.watch(notificationListProvider);
 
     return Scaffold(
@@ -51,46 +52,6 @@ class NotificationPage extends ConsumerWidget {
   }
 }
 
-final notificationListProvider = StateNotifierProvider<
-  NotificationListNotifier,
-  AsyncValue<NotificationListResponse>
->((ref) => NotificationListNotifier(ref.read(PartnerRepositoryProvider)));
-
-class NotificationListNotifier
-    extends StateNotifier<AsyncValue<NotificationListResponse>> {
-  final PartnerRepository _repository;
-  NotificationListNotifier(this._repository) : super(const AsyncValue.loading()) {
-    load();
-  }
-
-  Future<void> load({int page = 1, int limit = 20}) async {
-    state = const AsyncValue.loading();
-    try {
-      final response = await _repository.list(page: page, limit: limit);
-      state = AsyncValue.data(response);
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
-    }
-  }
-
-  Future<void> markAllAsRead() async {
-    try {
-      await _repository.markAllAsRead();
-      load();
-    } catch (e) {
-      // Show error
-    }
-  }
-
-  Future<void> markAsRead(String id) async {
-    try {
-      await _repository.markAsRead(id);
-      load();
-    } catch (e) {
-      // Show error
-    }
-  }
-}
 
 class _NotificationList extends StatelessWidget {
   const _NotificationList({
@@ -99,7 +60,7 @@ class _NotificationList extends StatelessWidget {
   });
 
   final NotificationListResponse data;
-  final PartnerRepository repository;
+  final NotificationRepository repository;
 
   @override
   Widget build(BuildContext context) {

@@ -41,6 +41,19 @@ class ApiClient {
     }
   }
 
+  Future<ApiResponse<T>> patch<T>(
+    String path, {
+    Object? data,
+    required T Function(Object? value) decode,
+  }) async {
+    try {
+      final response = await _dio.patch<Map<String, dynamic>>(path, data: data);
+      return _decode(response.data, decode);
+    } catch (error) {
+      throw ErrorMapper.map(error);
+    }
+  }
+
   Future<ApiResponse<T>> put<T>(
     String path, {
     Object? data,

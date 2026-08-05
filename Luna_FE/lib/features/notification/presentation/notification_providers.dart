@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../health/presentation/health_providers.dart';
 import '../../../core/network/api_client.dart';
 import '../data/notification_repository.dart';
 import '../domain/notification_models.dart';
