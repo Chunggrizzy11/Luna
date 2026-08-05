@@ -12,6 +12,7 @@ import '../../health/presentation/daily_log_sheet.dart';
 import '../../health/presentation/health_journal_page.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../notification/presentation/notification_providers.dart';
+import '../../notification/presentation/notification_page.dart';
 import 'home_page.dart';
 
 class OwnerShell extends ConsumerStatefulWidget {
@@ -35,7 +36,7 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
       CycleCalendarPage(onDayTap: _openLog),
       HealthJournalPage(onEntryTap: _openLog),
       const CyclePage(),
-      NotificationPage(),
+      const NotificationPage(),
     ];
     return Scaffold(
       body: IndexedStack(index: _index, children: pages),
