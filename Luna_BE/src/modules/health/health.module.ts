@@ -28,6 +28,6 @@ import { DailyLog, DailyLogSchema } from './schemas/daily-log.schema';
     JournalService,
     CareSuggestionService,
   ],
-  exports: [DailyLogService],
+  exports: [DailyLogService, DashboardService, CareSuggestionService],
 })
 export class HealthModule {}

@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DeviceModule } from '../device/device.module';
 import { CycleModule } from '../cycle/cycle.module';
 import { NotificationModule } from '../notification/notification.module';
+import { HealthModule } from '../health/health.module';
 import { NotificationSchedulerService } from './notification-scheduler.service';
 import { CareSuggestionService } from './care-suggestion.service';
 
@@ -13,8 +14,9 @@ import { CareSuggestionService } from './care-suggestion.service';
     DeviceModule,
     CycleModule,
     NotificationModule,
+    HealthModule,
   ],
-  providers: [NotificationSchedulerService, CareSuggestionService],
-  exports: [CareSuggestionService],
+  providers: [NotificationSchedulerService],
+  exports: [],
 })
 export class SchedulerModule {}

@@ -21,6 +21,6 @@ import { DeviceAuthGuard } from '../../common/guards/device-auth.guard';
         configService.getOrThrow<string>('DEVICE_TOKEN_PEPPER'),
     },
   ],
-  exports: [DeviceService, DeviceAuthGuard],
+  exports: [DeviceService, DeviceAuthGuard, MongooseModule],
 })
 export class DeviceModule {}
