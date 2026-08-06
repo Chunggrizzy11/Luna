@@ -33,17 +33,31 @@ export class PushNotificationService {
 
   private initFirebaseAdmin() {
     try {
-      const serviceAccountPath = path.resolve(process.cwd(), 'firebase-service-account.json');
-      if (fs.existsSync(serviceAccountPath)) {
+      // Check multiple possible locations for the secret file
+      const possiblePaths = [
+        path.resolve(process.cwd(), 'firebase-service-account.json'),
+        '/etc/secrets/firebase-service-account.json', // Render Secret Files default path
+        path.resolve(__dirname, '../../../../firebase-service-account.json'),
+      ];
+
+      let serviceAccountPath = null;
+      for (const p of possiblePaths) {
+        if (fs.existsSync(p)) {
+          serviceAccountPath = p;
+          break;
+        }
+      }
+
+      if (serviceAccountPath) {
         const app: App = initializeApp({
           credential: cert(serviceAccountPath),
         });
         this.messaging = getMessaging(app);
         this.isConfigured = true;
-        this.logger.log('Firebase Admin initialized successfully from firebase-service-account.json');
+        this.logger.log(`Firebase Admin initialized successfully from ${serviceAccountPath}`);
       } else {
         this.logger.warn(
-          'firebase-service-account.json not found in root directory. Push notifications will be mocked.',
+          'firebase-service-account.json not found. Push notifications will be mocked.',
         );
       }
     } catch (error) {
