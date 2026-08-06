@@ -21,6 +21,4 @@ export class PairingCode {
 
 export type PairingCodeDocument = HydratedDocument<PairingCode>;
 export const PairingCodeSchema = SchemaFactory.createForClass(PairingCode);
-PairingCodeSchema.index({ code: 1 }, { unique: true });
-PairingCodeSchema.index({ ownerDeviceId: 1 });
 PairingCodeSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 300 });
