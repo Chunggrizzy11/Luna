@@ -20,3 +20,6 @@ Luna_BE/coverage/
 .vscode/
 .DS_Store
 Thumbs.db
+ 
+# Firebase (only backend secret key)
+Luna_BE/firebase-service-account.json

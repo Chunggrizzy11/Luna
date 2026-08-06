@@ -3,12 +3,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../health/presentation/health_providers.dart';
 import '../../../core/network/api_client.dart';
 import '../data/notification_repository.dart';
+import '../data/push_notification_service.dart';
 import '../domain/notification_models.dart';
 
 /// Provider for NotificationRepository
 final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
   final api = ref.watch(apiClientProvider);
   return NotificationRepository(api);
+});
+
+/// Provider for PushNotificationService
+final pushNotificationServiceProvider = Provider<PushNotificationService>((ref) {
+  final api = ref.watch(apiClientProvider);
+  return PushNotificationService(api);
 });
 
 /// StateNotifier for notification list with pagination

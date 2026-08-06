@@ -3,6 +3,9 @@ import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Device } from '../device/schemas/device.schema';
+import * as admin from 'firebase-admin';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export const FIREBASE_ADMIN = 'FIREBASE_ADMIN';
 
@@ -16,17 +19,33 @@ export interface PushMessage {
 @Injectable()
 export class PushNotificationService {
   private readonly logger = new Logger(PushNotificationService.name);
-  private readonly isConfigured: boolean;
+  private isConfigured = false;
 
   constructor(
     @InjectModel(Device.name)
     private readonly deviceModel: Model<Device>,
     private readonly configService: ConfigService,
   ) {
-    this.isConfigured = this.configService.get<boolean>(
-      'notification.isFcmConfigured',
-      false,
-    );
+    this.initFirebaseAdmin();
+  }
+
+  private initFirebaseAdmin() {
+    try {
+      const serviceAccountPath = path.resolve(process.cwd(), 'firebase-service-account.json');
+      if (fs.existsSync(serviceAccountPath)) {
+        admin.initializeApp({
+          credential: admin.credential.cert(serviceAccountPath),
+        });
+        this.isConfigured = true;
+        this.logger.log('Firebase Admin initialized successfully from firebase-service-account.json');
+      } else {
+        this.logger.warn(
+          'firebase-service-account.json not found in root directory. Push notifications will be mocked.',
+        );
+      }
+    } catch (error) {
+      this.logger.error('Failed to initialize Firebase Admin', error);
+    }
   }
 
   async sendToDevice(
@@ -35,11 +54,6 @@ export class PushNotificationService {
     body: string,
     data?: Record<string, string>,
   ): Promise<void> {
-    if (!this.isConfigured) {
-      this.logger.warn('FCM not configured, skipping push notification.');
-      return;
-    }
-
     const device = await this.deviceModel
       .findById(deviceId)
       .select('fcmToken')
@@ -65,11 +79,6 @@ export class PushNotificationService {
     body: string,
     data?: Record<string, string>,
   ): Promise<void> {
-    if (!this.isConfigured) {
-      this.logger.warn('FCM not configured, skipping push notification.');
-      return;
-    }
-
     const devices = await this.deviceModel
       .find({ _id: { $in: deviceIds } })
       .select('fcmToken')
@@ -82,29 +91,47 @@ export class PushNotificationService {
 
     if (tokens.length === 0) return;
 
-    // Firebase Admin SDK would be used here
-    // For now, log the intended push
-    this.logger.log(
-      `Push notification would be sent to ${tokens.length} devices: ${title}`,
-    );
+    if (!this.isConfigured) {
+      this.logger.log(
+        `[MOCK] Push notification would be sent to ${tokens.length} devices: ${title}`,
+      );
+      return;
+    }
+
+    try {
+      const message = {
+        notification: { title, body },
+        data,
+        tokens,
+      };
+      const response = await admin.messaging().sendEachForMulticast(message);
+      this.logger.log(
+        `Multicast push sent. Success: ${response.successCount}, Failure: ${response.failureCount}`,
+      );
+    } catch (error) {
+      this.logger.error('Failed to send multicast push notification', error);
+    }
   }
 
   async send(message: PushMessage): Promise<void> {
     if (!this.isConfigured) {
-      this.logger.warn('FCM not configured, skipping push notification.');
+      this.logger.log(
+        `[MOCK] Push notification sent to ${message.token.substring(0, 8)}...: ${message.title}`,
+      );
       return;
     }
 
-    // Firebase Admin SDK integration point
-    // Example with firebase-admin:
-    // await getMessaging().send({
-    //   token: message.token,
-    //   notification: { title: message.title, body: message.body },
-    //   data: message.data,
-    // });
-
-    this.logger.log(
-      `Push notification sent to ${message.token.substring(0, 8)}...: ${message.title}`,
-    );
+    try {
+      await admin.messaging().send({
+        token: message.token,
+        notification: { title: message.title, body: message.body },
+        data: message.data,
+      });
+      this.logger.log(
+        `Push notification sent to ${message.token.substring(0, 8)}...: ${message.title}`,
+      );
+    } catch (error) {
+      this.logger.error('Failed to send push notification', error);
+    }
   }
 }

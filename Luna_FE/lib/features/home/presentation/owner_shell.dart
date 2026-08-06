@@ -26,6 +26,15 @@ class _OwnerShellState extends ConsumerState<OwnerShell> {
   int _index = 0;
 
   @override
+  void initState() {
+    super.initState();
+    // Initialize push notifications when owner logs in
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(pushNotificationServiceProvider).initialize();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final unreadCount = ref.watch(unreadCountProvider);
     void goHome() => setState(() => _index = 0);

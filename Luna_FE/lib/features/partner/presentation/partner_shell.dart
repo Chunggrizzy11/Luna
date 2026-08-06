@@ -37,6 +37,9 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
     if (_isListeningSocket) return;
     _isListeningSocket = true;
     
+    // Initialize push notifications for partner as well
+    ref.read(pushNotificationServiceProvider).initialize();
+    
     final socketService = ref.read(socketServiceProvider);
     socketService.onSosAlert.listen((_) {
       if (mounted) {

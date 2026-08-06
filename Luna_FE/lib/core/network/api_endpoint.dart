@@ -1,6 +1,7 @@
 abstract final class ApiEndpoint {
   static const registerDevice = '/devices/register';
   static const currentDevice = '/devices/me';
+  static const devicePushToken = '/devices/push-token';
   static const cycles = '/cycles';
   static const currentCycle = '/cycles/current';
   static const startCycle = '/cycles/start';
