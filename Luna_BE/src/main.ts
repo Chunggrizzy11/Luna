@@ -22,13 +22,13 @@ async function bootstrap() {
   const trustedProxyIps = configService.getOrThrow<string[]>(
     'app.trustedProxyIps',
   );
-  const trustedProxy = trustProxy
+  const trustedProxy = trustProxy && trustedProxyIps.length > 0
     ? createTrustedProxyTrust(trustedProxyIps)
     : undefined;
   const expressApp = app.getHttpAdapter().getInstance() as Express;
 
   app.setGlobalPrefix('api/v1');
-  expressApp.set('trust proxy', trustedProxy ?? false);
+  expressApp.set('trust proxy', trustedProxy ?? trustProxy);
   // CORS must be enabled before other middlewares so preflight
   // responses always carry the required Access-Control-* headers.
   app.enableCors({

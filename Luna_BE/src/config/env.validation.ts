@@ -109,9 +109,6 @@ export function validateEnvironment(
   }
   const trustProxy = parseBoolean(config.TRUST_PROXY, 'TRUST_PROXY', false);
   const trustedProxyIps = parseTrustedProxyIps(config.TRUSTED_PROXY_IPS);
-  if (trustProxy && trustedProxyIps.length === 0) {
-    throw new Error('TRUSTED_PROXY_IPS is required when TRUST_PROXY is true');
-  }
 
   const pepper = config.DEVICE_TOKEN_PEPPER;
   const deviceTokenPepper =
