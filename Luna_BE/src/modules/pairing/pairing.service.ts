@@ -86,10 +86,12 @@ export class PairingService {
     }
 
     // Check owner is still active (Find the only owner in this private app)
-    const owner = await this.deviceModel.findOne({
-      role: DeviceRole.OWNER,
-      status: DeviceStatus.ACTIVE,
-    });
+    const owner = await this.deviceModel
+      .findOne({
+        role: DeviceRole.OWNER,
+        status: DeviceStatus.ACTIVE,
+      })
+      .sort({ createdAt: -1 });
     if (!owner) {
       throw new NotFoundException('Owner device is no longer active or not found.');
     }
