@@ -33,7 +33,34 @@ export class PushNotificationService {
 
   private initFirebaseAdmin() {
     try {
-      // Check multiple possible locations for the secret file
+      // Method 1: Check Environment Variable (Base64 encoded JSON)
+      const base64Env = process.env.FIREBASE_SERVICE_ACCOUNT_BASE64;
+      if (base64Env) {
+        const decodedJson = Buffer.from(base64Env, 'base64').toString('utf-8');
+        const serviceAccount = JSON.parse(decodedJson);
+        const app: App = initializeApp({
+          credential: cert(serviceAccount),
+        });
+        this.messaging = getMessaging(app);
+        this.isConfigured = true;
+        this.logger.log('Firebase Admin initialized successfully from Environment Variable (Base64)');
+        return;
+      }
+
+      // Method 2: Check Environment Variable (Raw JSON string)
+      const rawJsonEnv = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+      if (rawJsonEnv) {
+        const serviceAccount = JSON.parse(rawJsonEnv);
+        const app: App = initializeApp({
+          credential: cert(serviceAccount),
+        });
+        this.messaging = getMessaging(app);
+        this.isConfigured = true;
+        this.logger.log('Firebase Admin initialized successfully from Environment Variable (Raw JSON)');
+        return;
+      }
+
+      // Method 3: Check multiple possible locations for the secret file
       const possiblePaths = [
         path.resolve(process.cwd(), 'firebase-service-account.json'),
         '/etc/secrets/firebase-service-account.json', // Render Secret Files default path
