@@ -47,7 +47,7 @@ async function bootstrap() {
       origin: string | undefined,
       callback: (error: Error | null, allow?: boolean) => void,
     ) => {
-      if (!origin || corsOrigins.includes(origin)) {
+      if (!origin || corsOrigins.includes('*') || corsOrigins.includes(origin)) {
         callback(null, true);
         return;
       }
