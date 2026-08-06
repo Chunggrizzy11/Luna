@@ -54,11 +54,12 @@ class HomePage extends ConsumerWidget {
         ),
         title: const Text('Luna của bạn'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.people_alt_outlined),
-            tooltip: 'Ghép đôi',
-            onPressed: () => context.push(AppRoutes.pairing),
-          ),
+          if (!isPartner)
+            IconButton(
+              icon: const Icon(Icons.people_alt_outlined),
+              tooltip: 'Ghép đôi',
+              onPressed: () => context.push(AppRoutes.pairing),
+            ),
         ],
       ),
       body: dashboard.when(

@@ -358,7 +358,7 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
             role: DeviceRole.partner,
             title: 'Nam - Đồng hành',
             description: 'Kết nối và chăm sóc người yêu',
-            icon: Icons.shield,
+            icon: Icons.boy,
             color: AppColor.accentSky,
             isSelected: _selectedRole == DeviceRole.partner,
             onTap: () => setState(() => _selectedRole = DeviceRole.partner),
