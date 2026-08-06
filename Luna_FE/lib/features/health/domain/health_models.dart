@@ -74,8 +74,17 @@ class OwnerDashboard {
 
   factory OwnerDashboard.fromJson(Map<String, dynamic> json) => OwnerDashboard(
     date: DateTime.parse(json['date'] as String),
-    cycle: CycleSummary.fromJson(json['cycle'] as Map<String, dynamic>),
-    dailyLog: DailyLog.fromJson(json['dailyLog'] as Map<String, dynamic>),
+    cycle: json['cycle'] == null ? const CycleSummary(
+      currentCycleDay: null,
+      isPeriodActive: false,
+      daysUntilNextPeriod: null,
+      averageCycleLength: 28,
+      averagePeriodLength: 5,
+      predictedPeriodStart: null,
+      predictedPeriodEnd: null,
+      ovulationDate: null,
+    ) : CycleSummary.fromJson(json['cycle'] as Map<String, dynamic>),
+    dailyLog: json['dailyLog'] == null ? const DailyLog() : DailyLog.fromJson(json['dailyLog'] as Map<String, dynamic>),
   );
 }
 

@@ -152,7 +152,7 @@ export class DashboardService {
       .select('_id pairId pairedOwnerDeviceId')
       .lean()
       .exec();
-    if (!partner?.pairId || !partner.pairedOwnerDeviceId) {
+    if (!partner?.pairedOwnerDeviceId) {
       return { audience: 'partner', relationship: 'unpaired' };
     }
     const owner = await this.deviceModel
@@ -164,7 +164,11 @@ export class DashboardService {
       .select('_id pairId')
       .lean()
       .exec();
-    if (!owner || owner.pairId !== partner.pairId) {
+    if (!owner) {
+      return { audience: 'partner', relationship: 'unpaired' };
+    }
+    // Tolerate missing pairId for older accounts, but if both have it, they must match
+    if (owner.pairId && partner.pairId && owner.pairId !== partner.pairId) {
       return { audience: 'partner', relationship: 'unpaired' };
     }
     return {
