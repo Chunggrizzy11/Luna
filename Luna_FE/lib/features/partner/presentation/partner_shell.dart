@@ -33,7 +33,11 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
     
     return statusAsync.when(
       loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (error, _) => const PartnerPendingPage(),
+      error: (error, _) => Scaffold(
+        body: Center(
+          child: Text('Lỗi tải trạng thái: $error', textAlign: TextAlign.center),
+        ),
+      ),
       data: (status) {
         if (!status.isPaired) {
           return const PartnerPendingPage();

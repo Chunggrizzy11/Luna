@@ -107,7 +107,12 @@ class _JoinPairingPageState extends ConsumerState<JoinPairingPage> {
                 const SizedBox(height: AppSpacing.xl),
                 FilledButton(
                   onPressed: () {
-                    context.go(AppRoutes.home);
+                    ref.invalidate(pairingStatusProvider);
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go(AppRoutes.home);
+                    }
                   },
                   child: const Text('Bắt đầu'),
                 ),
