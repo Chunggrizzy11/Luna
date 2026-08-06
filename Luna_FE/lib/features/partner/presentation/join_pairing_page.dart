@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../core/router/app_routes.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../data/partner_repository.dart';
@@ -104,7 +107,7 @@ class _JoinPairingPageState extends ConsumerState<JoinPairingPage> {
                 const SizedBox(height: AppSpacing.xl),
                 FilledButton(
                   onPressed: () {
-                    Navigator.of(context).popUntil((route) => route.isFirst);
+                    context.go(AppRoutes.home);
                   },
                   child: const Text('Bắt đầu'),
                 ),
