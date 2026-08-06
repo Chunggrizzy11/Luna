@@ -1,9 +1,10 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Device } from '../device/schemas/device.schema';
-import * as admin from 'firebase-admin';
+import { initializeApp, cert, type App } from 'firebase-admin/app';
+import { getMessaging, type Messaging } from 'firebase-admin/messaging';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -20,6 +21,7 @@ export interface PushMessage {
 export class PushNotificationService {
   private readonly logger = new Logger(PushNotificationService.name);
   private isConfigured = false;
+  private messaging: Messaging | null = null;
 
   constructor(
     @InjectModel(Device.name)
@@ -33,9 +35,10 @@ export class PushNotificationService {
     try {
       const serviceAccountPath = path.resolve(process.cwd(), 'firebase-service-account.json');
       if (fs.existsSync(serviceAccountPath)) {
-        admin.initializeApp({
-          credential: admin.credential.cert(serviceAccountPath),
+        const app: App = initializeApp({
+          credential: cert(serviceAccountPath),
         });
+        this.messaging = getMessaging(app);
         this.isConfigured = true;
         this.logger.log('Firebase Admin initialized successfully from firebase-service-account.json');
       } else {
@@ -91,7 +94,7 @@ export class PushNotificationService {
 
     if (tokens.length === 0) return;
 
-    if (!this.isConfigured) {
+    if (!this.isConfigured || !this.messaging) {
       this.logger.log(
         `[MOCK] Push notification would be sent to ${tokens.length} devices: ${title}`,
       );
@@ -104,7 +107,7 @@ export class PushNotificationService {
         data,
         tokens,
       };
-      const response = await admin.messaging().sendEachForMulticast(message);
+      const response = await this.messaging.sendEachForMulticast(message);
       this.logger.log(
         `Multicast push sent. Success: ${response.successCount}, Failure: ${response.failureCount}`,
       );
@@ -114,7 +117,7 @@ export class PushNotificationService {
   }
 
   async send(message: PushMessage): Promise<void> {
-    if (!this.isConfigured) {
+    if (!this.isConfigured || !this.messaging) {
       this.logger.log(
         `[MOCK] Push notification sent to ${message.token.substring(0, 8)}...: ${message.title}`,
       );
@@ -122,7 +125,7 @@ export class PushNotificationService {
     }
 
     try {
-      await admin.messaging().send({
+      await this.messaging.send({
         token: message.token,
         notification: { title: message.title, body: message.body },
         data: message.data,
@@ -135,3 +138,4 @@ export class PushNotificationService {
     }
   }
 }
+
