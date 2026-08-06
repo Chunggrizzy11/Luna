@@ -16,7 +16,6 @@ import 'package:luna_fe/features/health/presentation/health_providers.dart';
 import 'package:luna_fe/features/health/presentation/journal_controller.dart';
 import 'package:luna_fe/features/home/presentation/home_page.dart';
 import 'package:luna_fe/features/home/presentation/owner_shell.dart';
-import 'package:luna_fe/features/partner/presentation/partner_pending_page.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('vi'));
@@ -122,13 +121,7 @@ void main() {
     },
   );
 
-  testWidgets('partner placeholder does not mount the owner shell', (
-    tester,
-  ) async {
-    await tester.pumpWidget(const MaterialApp(home: PartnerPendingPage()));
-    expect(find.byType(OwnerShell), findsNothing);
-    expect(find.textContaining('không được hiển thị'), findsOneWidget);
-  });
+
 
   for (final failure in <Failure>[
     const NetworkFailure('Không thể kết nối mạng.'),

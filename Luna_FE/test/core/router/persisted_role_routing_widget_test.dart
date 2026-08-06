@@ -11,7 +11,7 @@ import 'package:luna_fe/features/health/domain/health_models.dart';
 import 'package:luna_fe/features/health/presentation/health_providers.dart';
 import 'package:luna_fe/features/health/presentation/journal_controller.dart';
 import 'package:luna_fe/features/home/presentation/owner_shell.dart';
-import 'package:luna_fe/features/partner/presentation/partner_pending_page.dart';
+import 'package:luna_fe/features/partner/presentation/partner_shell.dart';
 import 'package:luna_fe/shared/entities/device_identity.dart';
 import 'package:luna_fe/shared/enums/device_role.dart';
 
@@ -28,7 +28,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(PartnerPendingPage), findsOneWidget);
+      expect(find.byType(PartnerShell), findsOneWidget);
       expect(find.byType(OwnerShell), findsNothing);
     },
   );
@@ -73,7 +73,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(OwnerShell), findsOneWidget);
-    expect(find.byType(PartnerPendingPage), findsNothing);
+    expect(find.byType(PartnerShell), findsNothing);
   });
 }
 

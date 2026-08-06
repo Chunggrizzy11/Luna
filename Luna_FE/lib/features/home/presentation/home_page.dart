@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/config/app_identity_state.dart';
 import '../../../core/error/failure.dart';
-import '../../../core/router/app_routes.dart';
 import '../../../core/theme/app_spacing.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
@@ -55,14 +53,7 @@ class HomePage extends ConsumerWidget {
           },
         ),
         title: const Text('Luna của bạn'),
-        actions: [
-          if (!isPartner)
-            IconButton(
-              icon: const Icon(Icons.people_alt_outlined),
-              tooltip: 'Ghép đôi',
-              onPressed: () => context.push(AppRoutes.pairing),
-            ),
-        ],
+        actions: const [],
       ),
       body: dashboard.when(
         loading: () => const AppLoading(label: 'Đang tải tổng quan'),

@@ -4,6 +4,7 @@ import { Model } from 'mongoose';
 import { Device, DeviceDocument, DeviceRole, DeviceStatus } from '../device/schemas/device.schema';
 import { NotificationGateway } from '../notification/notification.gateway';
 import { NotificationService } from '../notification/notification.service';
+import { PushNotificationService } from '../notification/push-notification.service';
 import { NotificationType } from '../notification/schemas/notification.schema';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 
@@ -13,6 +14,7 @@ export class SosService {
     @InjectModel(Device.name) private readonly deviceModel: Model<DeviceDocument>,
     private readonly notificationGateway: NotificationGateway,
     private readonly notificationService: NotificationService,
+    private readonly pushNotificationService: PushNotificationService,
   ) {}
 
   async trigger(device: AuthenticatedDevice): Promise<void> {
@@ -40,6 +42,13 @@ export class SosService {
       title: '🆘 Tín hiệu khẩn cấp',
       body: 'Bạn gái đang cần bạn! Hãy liên hệ ngay.',
     });
+
+    // Send push notification
+    await this.pushNotificationService.sendToDevice(
+      partnerId,
+      '🆘 Tín hiệu khẩn cấp',
+      'Bạn gái đang cần bạn! Hãy liên hệ ngay.',
+    );
 
     // Emit realtime socket event
     this.notificationGateway.emitToDevice(partnerId, 'sos-alert', {

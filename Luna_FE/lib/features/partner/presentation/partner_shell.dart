@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -19,7 +21,7 @@ import '../../../core/network/network_providers.dart';
 import 'partner_providers.dart';
 import '../../sos/sos_provider.dart';
 import '../../sos/sos_alert_overlay.dart';
-import 'partner_pending_page.dart';
+import '../../../core/config/app_identity_state.dart';
 
 class PartnerShell extends ConsumerStatefulWidget {
   const PartnerShell({super.key});
@@ -56,7 +58,9 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
       ),
       data: (status) {
         if (!status.isPaired) {
-          return const PartnerPendingPage();
+          return _PartnerWaitingScreen(
+            onRetry: () => ref.invalidate(pairingStatusProvider),
+          );
         }
 
         _listenSos();
@@ -157,5 +161,117 @@ class _DailyLogLoader extends ConsumerWidget {
             isReadOnly: true,
           ),
         );
+  }
+}
+
+class _PartnerWaitingScreen extends ConsumerStatefulWidget {
+  const _PartnerWaitingScreen({required this.onRetry});
+  final VoidCallback onRetry;
+
+  @override
+  ConsumerState<_PartnerWaitingScreen> createState() =>
+      _PartnerWaitingScreenState();
+}
+
+class _PartnerWaitingScreenState
+    extends ConsumerState<_PartnerWaitingScreen> {
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        ref.invalidate(pairingStatusProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Đăng xuất',
+          onPressed: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: const Text('Đăng xuất'),
+                content: const Text(
+                  'Bạn có chắc chắn muốn thoát và tạo tài khoản mới không?',
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(false),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(true),
+                    child: const Text('Đăng xuất'),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              ref.read(appIdentityStateProvider).revokeIdentity();
+            }
+          },
+        ),
+        title: const Text('Luna đồng hành'),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.favorite,
+                size: 72,
+                color: colorScheme.primary.withValues(alpha: 0.6),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Đang chờ kết nối...',
+                style: theme.textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Hệ thống sẽ tự động kết nối khi bạn gái mở ứng dụng. '
+                'Bạn không cần làm gì cả 💙',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(height: 16),
+              TextButton.icon(
+                onPressed: widget.onRetry,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Kiểm tra lại'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

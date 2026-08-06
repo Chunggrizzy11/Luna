@@ -23,12 +23,52 @@ export class DeviceService {
     const token = randomBytes(32).toString('hex');
     const registration = { ...dto };
     delete registration.pairId;
+
+    let pairId: string | undefined;
+    let pairedOwnerDeviceId: string | undefined;
+
+    if (dto.role === DeviceRole.OWNER) {
+      pairId = randomUUID();
+    } else if (dto.role === DeviceRole.PARTNER) {
+      const owner = await this.deviceModel
+        .findOne({ role: DeviceRole.OWNER, status: DeviceStatus.ACTIVE })
+        .sort({ createdAt: -1 });
+      if (owner) {
+        pairId = owner.pairId;
+        pairedOwnerDeviceId = String(owner._id);
+
+        await this.deviceModel.updateMany(
+          {
+            pairedOwnerDeviceId: String(owner._id),
+            role: DeviceRole.PARTNER,
+            status: DeviceStatus.ACTIVE,
+          },
+          {
+            $unset: { pairedOwnerDeviceId: '', pairId: '' },
+          },
+        );
+      }
+    }
+
     const device = await this.deviceModel.create({
       ...registration,
-      ...(dto.role === DeviceRole.OWNER ? { pairId: randomUUID() } : {}),
+      ...(pairId ? { pairId } : {}),
+      ...(pairedOwnerDeviceId ? { pairedOwnerDeviceId } : {}),
       tokenHash: this.hashToken(token),
       status: DeviceStatus.ACTIVE,
     });
+
+    if (dto.role === DeviceRole.OWNER) {
+      const partner = await this.deviceModel
+        .findOne({ role: DeviceRole.PARTNER, status: DeviceStatus.ACTIVE })
+        .sort({ createdAt: -1 });
+      if (partner) {
+        await this.deviceModel.findByIdAndUpdate(partner._id, {
+          pairId: pairId,
+          pairedOwnerDeviceId: String(device._id),
+        });
+      }
+    }
 
     return { deviceId: device.id ?? String(device._id), token };
   }
