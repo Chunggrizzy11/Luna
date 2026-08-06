@@ -29,18 +29,8 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api/v1');
   expressApp.set('trust proxy', trustedProxy ?? false);
-  app.use(helmet());
-  app.use(compression());
-  app.use(
-    createTransportSecurityMiddleware({
-      nodeEnvironment:
-        configService.getOrThrow<NodeEnvironment>('app.NODE_ENV'),
-      allowInsecureHttp: configService.getOrThrow<boolean>(
-        'app.ALLOW_INSECURE_HTTP',
-      ),
-      trustedProxy,
-    }),
-  );
+  // CORS must be enabled before other middlewares so preflight
+  // responses always carry the required Access-Control-* headers.
   app.enableCors({
     credentials: true,
     origin: (
@@ -55,6 +45,18 @@ async function bootstrap() {
       callback(new Error('Origin is not allowed by CORS'));
     },
   });
+  app.use(helmet());
+  app.use(compression());
+  app.use(
+    createTransportSecurityMiddleware({
+      nodeEnvironment:
+        configService.getOrThrow<NodeEnvironment>('app.NODE_ENV'),
+      allowInsecureHttp: configService.getOrThrow<boolean>(
+        'app.ALLOW_INSECURE_HTTP',
+      ),
+      trustedProxy,
+    }),
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

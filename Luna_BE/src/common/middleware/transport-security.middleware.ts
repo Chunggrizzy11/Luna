@@ -45,7 +45,10 @@ export function createTransportSecurityMiddleware(
   options: TransportSecurityOptions,
 ): RequestHandler {
   return (request: Request, _response: Response, next: NextFunction): void => {
+    // Always allow CORS preflight requests through so the browser
+    // receives proper CORS headers before sending the actual request.
     if (
+      request.method === 'OPTIONS' ||
       isSecureTransport(request, options.trustedProxy) ||
       (options.nodeEnvironment !== 'production' && options.allowInsecureHttp)
     ) {
