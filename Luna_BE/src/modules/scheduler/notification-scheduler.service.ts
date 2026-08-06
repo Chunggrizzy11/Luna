@@ -91,7 +91,7 @@ export class NotificationSchedulerService {
     if (!owner) return;
 
     const cycles = await this.cycleService.list(
-      { deviceId: ownerDeviceId } as any,
+      { deviceId: ownerDeviceId, role: 'owner' } as any,
       { from: undefined, to: undefined, page: 1, limit: 10 } as any,
     );
 
