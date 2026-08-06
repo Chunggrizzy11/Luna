@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { DeviceRole } from '../device/schemas/device.schema';
+import { DeviceService } from '../device/device.service';
 import { DailyLog } from './schemas/daily-log.schema';
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -38,15 +39,14 @@ export class JournalService {
   constructor(
     @InjectModel(DailyLog.name)
     private readonly dailyLogModel: Model<DailyLog>,
+    private readonly deviceService: DeviceService,
   ) {}
 
   async list(
-    owner: AuthenticatedDevice,
+    device: AuthenticatedDevice,
     query: JournalQuery,
   ): Promise<JournalResponse> {
-    if (owner.role !== DeviceRole.OWNER) {
-      throw new ForbiddenException('Only the owner can access journal data.');
-    }
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
     const from = query.from ? this.assertDateOnly(query.from) : undefined;
     const to = query.to ? this.assertDateOnly(query.to) : undefined;
     if (from && to && from > to) {
@@ -65,7 +65,7 @@ export class JournalService {
       ...(to ? { $lte: to } : {}),
     };
     const filter = {
-      ownerDeviceId: owner.deviceId,
+      ownerDeviceId,
       ...(Object.keys(date).length > 0 ? { date } : {}),
     };
     const records = await this.dailyLogModel

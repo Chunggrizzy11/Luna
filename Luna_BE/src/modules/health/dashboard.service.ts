@@ -42,14 +42,13 @@ export interface OwnerDashboardResponse {
 export interface PartnerDashboardResponse {
   date: string;
   relationship: 'paired' | 'unpaired';
-  cycle: {
-    currentCycleDay: number | null;
-    isPeriodActive: boolean;
-    daysUntilNextPeriod: number | null;
-    predictedPeriodStart: string | null;
-    predictedPeriodEnd: string | null;
+  cycle: CycleSummary | null;
+  dailyLog: {
+    mood: string | null;
+    symptoms: string[];
+    discomfortLevel: number | null;
+    note: string | null;
   } | null;
-  discomfortLevel: number | null;
 }
 
 @Injectable()
@@ -73,7 +72,7 @@ export class DashboardService {
         date: normalizedDate,
         relationship: 'unpaired',
         cycle: null,
-        discomfortLevel: null,
+        dailyLog: null,
       };
     }
 
@@ -99,8 +98,13 @@ export class DashboardService {
       return {
         date: normalizedDate,
         relationship: 'paired',
-        cycle: this.toPartnerCycle(cycle),
-        discomfortLevel: dailyLog?.discomfortLevel ?? null,
+        cycle,
+        dailyLog: {
+          mood: dailyLog?.mood ?? null,
+          symptoms: dailyLog?.symptoms ?? [],
+          discomfortLevel: dailyLog?.discomfortLevel ?? null,
+          note: dailyLog?.note ?? null,
+        },
       };
     }
     return {
@@ -171,17 +175,7 @@ export class DashboardService {
     };
   }
 
-  private toPartnerCycle(
-    cycle: CycleSummary,
-  ): PartnerDashboardResponse['cycle'] {
-    return {
-      currentCycleDay: cycle.currentCycleDay,
-      isPeriodActive: cycle.isPeriodActive,
-      daysUntilNextPeriod: cycle.daysUntilNextPeriod,
-      predictedPeriodStart: cycle.predictedPeriodStart,
-      predictedPeriodEnd: cycle.predictedPeriodEnd,
-    };
-  }
+
 
   private assertDateOnly(value: string): string {
     const match = DATE_PATTERN.exec(value);

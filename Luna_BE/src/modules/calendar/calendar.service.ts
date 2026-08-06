@@ -9,6 +9,7 @@ import type { Model } from 'mongoose';
 import { BusinessDateClock } from '../../common/date/business-date';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { DeviceRole } from '../device/schemas/device.schema';
+import { DeviceService } from '../device/device.service';
 import {
   buildCalendarDays,
   calculateCycleSummary,
@@ -34,23 +35,22 @@ export class CalendarService {
     @Inject(CYCLE_SETTINGS_PROVIDER)
     private readonly settingsProvider: CycleSettingsProvider,
     private readonly businessDate: BusinessDateClock,
+    private readonly deviceService: DeviceService,
   ) {}
 
   async getMonth(
-    owner: AuthenticatedDevice,
+    device: AuthenticatedDevice,
     month: string,
   ): Promise<CalendarResponse> {
-    if (owner.role !== DeviceRole.OWNER) {
-      throw new ForbiddenException('Only the owner can access calendar data.');
-    }
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
     this.assertMonth(month);
     const [cycles, settings] = await Promise.all([
       this.cycleModel
-        .find({ ownerDeviceId: owner.deviceId })
+        .find({ ownerDeviceId })
         .select('startDate endDate periodLength cycleLength -_id')
         .lean()
         .exec(),
-      this.settingsProvider.getSettings(owner.deviceId),
+      this.settingsProvider.getSettings(ownerDeviceId),
     ]);
     const today = this.businessDate.today();
     const summary = calculateCycleSummary(cycles, settings, today);

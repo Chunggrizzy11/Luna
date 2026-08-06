@@ -15,9 +15,10 @@ import '../../health/domain/health_models.dart';
 import '../../health/presentation/health_providers.dart';
 
 class HomePage extends ConsumerWidget {
-  const HomePage({this.onOpenDailyLog, this.onOpenCycle, super.key});
+  const HomePage({this.onOpenDailyLog, this.onOpenCycle, this.isPartner = false, super.key});
   final VoidCallback? onOpenDailyLog;
   final VoidCallback? onOpenCycle;
+  final bool isPartner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -99,14 +100,16 @@ class HomePage extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: AppButton(
-        fullWidth: false,
-        size: ButtonSize.large,
-        onPressed: onOpenDailyLog,
-        icon: Icons.edit_note,
-        label: 'Ghi hôm nay',
-        variant: ButtonVariant.brand,
-      ),
+      floatingActionButton: isPartner
+          ? null
+          : AppButton(
+              fullWidth: false,
+              size: ButtonSize.large,
+              onPressed: onOpenDailyLog,
+              icon: Icons.edit_note,
+              label: 'Ghi hôm nay',
+              variant: ButtonVariant.brand,
+            ),
     );
   }
 }

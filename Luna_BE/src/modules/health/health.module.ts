@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { BusinessDateModule } from '../../common/date/business-date.module';
+import { DeviceModule } from '../device/device.module';
 import { CycleModule } from '../cycle/cycle.module';
 import { Cycle, CycleSchema } from '../cycle/schemas/cycle.schema';
 import { Device, DeviceSchema } from '../device/schemas/device.schema';
@@ -15,6 +16,7 @@ import { DailyLog, DailyLogSchema } from './schemas/daily-log.schema';
   imports: [
     BusinessDateModule,
     CycleModule,
+    DeviceModule,
     MongooseModule.forFeature([
       { name: DailyLog.name, schema: DailyLogSchema },
       { name: Cycle.name, schema: CycleSchema },

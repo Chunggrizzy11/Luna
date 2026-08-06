@@ -12,9 +12,10 @@ import 'health_providers.dart';
 import 'journal_controller.dart';
 
 class HealthJournalPage extends ConsumerWidget {
-  const HealthJournalPage({this.onEntryTap, this.onGoHome, super.key});
+  const HealthJournalPage({this.onEntryTap, this.onGoHome, this.isPartner = false, super.key});
   final ValueChanged<DateTime>? onEntryTap;
   final VoidCallback? onGoHome;
+  final bool isPartner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -56,6 +57,84 @@ class HealthJournalPage extends ConsumerWidget {
           return _LoadMoreFooter(state: journal);
         }
         final item = journal.items[index];
+        final card = Semantics(
+          button: onEntryTap != null,
+          label: 'Nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
+          child: AppCard(
+            onTap: onEntryTap == null ? null : () => onEntryTap!(item.date),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('dd/MM/yyyy').format(item.date),
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        '${item.mood?.emoji ?? '—'} ${item.mood?.label ?? 'Chưa ghi tâm trạng'}',
+                      ),
+                      if (item.symptoms.isNotEmpty)
+                        Text(item.symptoms.map((value) => value.label).join(' • ')),
+                      if (item.discomfortLevel != null)
+                        Text('Mức khó chịu: ${item.discomfortLevel}/5'),
+                      if (item.note?.isNotEmpty == true) ...[
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(item.note!),
+                      ],
+                    ],
+                  ),
+                ),
+                if (!isPartner)
+                  IconButton(
+                    icon: Icon(Icons.delete_outline, color: Colors.red.shade300),
+                    tooltip: 'Xóa nhật ký',
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Xóa nhật ký'),
+                          content: Text(
+                            'Bạn có chắc muốn xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}?',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Hủy'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(ctx, true),
+                              style: TextButton.styleFrom(foregroundColor: Colors.red),
+                              child: const Text('Xóa'),
+                            ),
+                          ],
+                        ),
+                      ) ?? false;
+                      if (confirmed && context.mounted) {
+                        await ref.read(dailyLogControllerProvider.notifier).deleteEntry(item.date);
+                        ref.read(journalProvider.notifier).removeEntry(item.date);
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '✅ Đã xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
+                              ),
+                              backgroundColor: const Color(0xFF007A55),
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+              ],
+            ),
+          ),
+        );
+
+        if (isPartner) return card;
+
         return Dismissible(
           key: ValueKey('journal-${item.date.toIso8601String()}'),
           direction: DismissDirection.endToStart,
@@ -104,80 +183,7 @@ class HealthJournalPage extends ConsumerWidget {
               );
             }
           },
-          child: Semantics(
-            button: onEntryTap != null,
-            label: 'Nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
-            child: AppCard(
-              onTap: onEntryTap == null ? null : () => onEntryTap!(item.date),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          DateFormat('dd/MM/yyyy').format(item.date),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: AppSpacing.xs),
-                        Text(
-                          '${item.mood?.emoji ?? '—'} ${item.mood?.label ?? 'Chưa ghi tâm trạng'}',
-                        ),
-                        if (item.symptoms.isNotEmpty)
-                          Text(item.symptoms.map((value) => value.label).join(' • ')),
-                        if (item.discomfortLevel != null)
-                          Text('Mức khó chịu: ${item.discomfortLevel}/5'),
-                        if (item.note?.isNotEmpty == true) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(item.note!),
-                        ],
-                      ],
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.delete_outline, color: Colors.red.shade300),
-                    tooltip: 'Xóa nhật ký',
-                    onPressed: () async {
-                      final confirmed = await showDialog<bool>(
-                        context: context,
-                        builder: (ctx) => AlertDialog(
-                          title: const Text('Xóa nhật ký'),
-                          content: Text(
-                            'Bạn có chắc muốn xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}?',
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, false),
-                              child: const Text('Hủy'),
-                            ),
-                            TextButton(
-                              onPressed: () => Navigator.pop(ctx, true),
-                              style: TextButton.styleFrom(foregroundColor: Colors.red),
-                              child: const Text('Xóa'),
-                            ),
-                          ],
-                        ),
-                      ) ?? false;
-                      if (confirmed && context.mounted) {
-                        await ref.read(dailyLogControllerProvider.notifier).deleteEntry(item.date);
-                        ref.read(journalProvider.notifier).removeEntry(item.date);
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                '✅ Đã xóa nhật ký ngày ${DateFormat('dd/MM/yyyy').format(item.date)}',
-                              ),
-                              backgroundColor: const Color(0xFF007A55),
-                            ),
-                          );
-                        }
-                      }
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+          child: card,
         );
       },
     );

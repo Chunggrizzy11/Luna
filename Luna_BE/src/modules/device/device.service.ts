@@ -1,4 +1,4 @@
-import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import type { Model } from 'mongoose';
@@ -68,6 +68,21 @@ export class DeviceService {
     await this.deviceModel
       .findByIdAndUpdate(deviceId, { status: DeviceStatus.REVOKED })
       .exec();
+  }
+
+  async resolveOwnerId(device: AuthenticatedDevice): Promise<string> {
+    if (device.role === DeviceRole.OWNER) {
+      return device.deviceId;
+    }
+    const partner = await this.deviceModel
+      .findById(device.deviceId)
+      .select('pairedOwnerDeviceId')
+      .lean()
+      .exec();
+    if (!partner?.pairedOwnerDeviceId) {
+      throw new ForbiddenException('Partner is not paired with any owner.');
+    }
+    return partner.pairedOwnerDeviceId;
   }
 
   private hashToken(token: string): string {

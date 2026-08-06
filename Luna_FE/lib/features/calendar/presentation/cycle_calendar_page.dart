@@ -12,10 +12,11 @@ import '../domain/cycle_calendar.dart';
 import '../../health/presentation/health_providers.dart';
 
 class CycleCalendarPage extends ConsumerStatefulWidget {
-  const CycleCalendarPage({this.initialMonth, this.onDayTap, this.onGoHome, super.key});
+  const CycleCalendarPage({this.initialMonth, this.onDayTap, this.onGoHome, this.isPartner = false, super.key});
   final DateTime? initialMonth;
   final ValueChanged<DateTime>? onDayTap;
   final VoidCallback? onGoHome;
+  final bool isPartner;
 
   @override
   ConsumerState<CycleCalendarPage> createState() => _CycleCalendarPageState();

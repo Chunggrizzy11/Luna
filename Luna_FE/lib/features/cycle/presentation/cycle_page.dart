@@ -13,8 +13,9 @@ import '../../health/presentation/health_providers.dart';
 import 'cycle_controller.dart';
 
 class CyclePage extends ConsumerWidget {
-  const CyclePage({this.onGoHome, super.key});
+  const CyclePage({this.onGoHome, this.isPartner = false, super.key});
   final VoidCallback? onGoHome;
+  final bool isPartner;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -65,15 +66,17 @@ class CyclePage extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            AppButton(
-              label: cycle == null ? 'Bắt đầu kỳ kinh' : 'Kết thúc kỳ kinh',
-              icon: cycle == null
-                  ? Icons.water_drop_outlined
-                  : Icons.stop_circle_outlined,
-              isLoading: mutation.isLoading,
-              onPressed: () => _confirm(context, ref, start: cycle == null),
-            ),
+            if (!isPartner) ...[
+              const SizedBox(height: AppSpacing.lg),
+              AppButton(
+                label: cycle == null ? 'Bắt đầu kỳ kinh' : 'Kết thúc kỳ kinh',
+                icon: cycle == null
+                    ? Icons.water_drop_outlined
+                    : Icons.stop_circle_outlined,
+                isLoading: mutation.isLoading,
+                onPressed: () => _confirm(context, ref, start: cycle == null),
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             Semantics(
               label: 'Lưu ý về dự đoán chu kỳ',

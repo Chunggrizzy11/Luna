@@ -10,6 +10,7 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import type { ClientSession, Connection, Model } from 'mongoose';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { DeviceRole } from '../device/schemas/device.schema';
+import { DeviceService } from '../device/device.service';
 import { calculateCycleSummary } from './cycle-calculator.service';
 import type { CycleQueryDto } from './dto/cycle-query.dto';
 import { Cycle, CycleSource } from './schemas/cycle.schema';
@@ -49,6 +50,7 @@ export class CycleService {
     @Inject(CYCLE_SETTINGS_PROVIDER)
     private readonly settingsProvider: CycleSettingsProvider,
     @InjectConnection() private readonly connection: Connection,
+    private readonly deviceService: DeviceService,
   ) {}
 
   async start(
@@ -171,20 +173,20 @@ export class CycleService {
     return this.toResponse(updated);
   }
 
-  async findCurrent(owner: AuthenticatedDevice): Promise<CycleResponse | null> {
-    this.requireOwner(owner);
+  async findCurrent(device: AuthenticatedDevice): Promise<CycleResponse | null> {
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
     const cycle = await this.cycleModel
-      .findOne({ ownerDeviceId: owner.deviceId, endDate: null })
+      .findOne({ ownerDeviceId, endDate: null })
       .lean()
       .exec();
     return cycle ? this.toResponse(cycle) : null;
   }
 
   async list(
-    owner: AuthenticatedDevice,
+    device: AuthenticatedDevice,
     range: Pick<CycleQueryDto, 'from' | 'to' | 'page' | 'limit'>,
   ): Promise<CycleListResponse> {
-    this.requireOwner(owner);
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
     const from = range.from ? this.assertDateOnly(range.from) : undefined;
     const to = range.to ? this.assertDateOnly(range.to) : undefined;
     if (from && to && from > to) {
@@ -197,7 +199,7 @@ export class CycleService {
       ...(to ? { $lte: to } : {}),
     };
     const filter = {
-      ownerDeviceId: owner.deviceId,
+      ownerDeviceId,
       ...(Object.keys(startDate).length > 0 ? { startDate } : {}),
     };
     const cycles = await this.cycleModel
@@ -215,14 +217,14 @@ export class CycleService {
   }
 
   async prediction(
-    owner: AuthenticatedDevice,
+    device: AuthenticatedDevice,
     today: string,
   ): Promise<CycleSummary> {
-    this.requireOwner(owner);
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
     const normalizedToday = this.assertDateOnly(today);
     const [cycles, settings] = await Promise.all([
-      this.cycleModel.find({ ownerDeviceId: owner.deviceId }).lean().exec(),
-      this.settingsProvider.getSettings(owner.deviceId),
+      this.cycleModel.find({ ownerDeviceId }).lean().exec(),
+      this.settingsProvider.getSettings(ownerDeviceId),
     ]);
     return calculateCycleSummary(cycles, settings, normalizedToday);
   }

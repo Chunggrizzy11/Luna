@@ -20,15 +20,17 @@ class DailyLogSheet extends StatefulWidget {
   const DailyLogSheet({
     required this.date,
     required this.initial,
-    required this.onSave,
-    required this.onDeleteNote,
+    this.onSave,
+    this.onDeleteNote,
+    this.isReadOnly = false,
     this.errorMessage,
     super.key,
   });
   final DateTime date;
   final DailyLog initial;
-  final SaveDailyLog onSave;
-  final Future<void> Function() onDeleteNote;
+  final SaveDailyLog? onSave;
+  final Future<void> Function()? onDeleteNote;
+  final bool isReadOnly;
   final String? errorMessage;
 
   @override
@@ -74,7 +76,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
                     avatar: Text(mood.emoji),
                     label: Text(mood.label),
                     selected: _mood == mood,
-                    onSelected: (_) => setState(() => _mood = mood),
+                    onSelected: widget.isReadOnly ? null : (_) => setState(() => _mood = mood),
                   ),
                 ),
               )
@@ -89,7 +91,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
                 (symptom) => FilterChip(
                   label: Text(symptom.label),
                   selected: _symptoms.contains(symptom),
-                  onSelected: (selected) => setState(() {
+                  onSelected: widget.isReadOnly ? null : (selected) => setState(() {
                     selected
                         ? _symptoms.add(symptom)
                         : _symptoms.remove(symptom);
@@ -109,13 +111,14 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
             max: 5,
             divisions: 5,
             label: '${_discomfort.round()}',
-            onChanged: (value) => setState(() => _discomfort = value),
+            onChanged: widget.isReadOnly ? null : (value) => setState(() => _discomfort = value),
           ),
         ),
         TextField(
           controller: _note,
           maxLength: 4000,
           maxLines: 4,
+          readOnly: widget.isReadOnly,
           decoration: const InputDecoration(labelText: 'Ghi chú sức khỏe'),
         ),
         if (widget.errorMessage != null) ...[
@@ -128,7 +131,7 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
             ),
           ),
         ],
-        if (widget.initial.note != null)
+        if (!widget.isReadOnly && widget.initial.note != null)
           Align(
             alignment: Alignment.centerRight,
             child: IconButton(
@@ -137,15 +140,17 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
               icon: const Icon(Icons.delete_outline),
             ),
           ),
-        AppButton(label: 'Lưu nhật ký', isLoading: _saving, onPressed: _save),
+        if (!widget.isReadOnly)
+          AppButton(label: 'Lưu nhật ký', isLoading: _saving, onPressed: _save),
       ],
     ),
   );
 
   Future<void> _save() async {
+    if (widget.onSave == null) return;
     setState(() => _saving = true);
     try {
-      await widget.onSave(_mood, _symptoms, _discomfort.round(), _note.text);
+      await widget.onSave!(_mood, _symptoms, _discomfort.round(), _note.text);
     } catch (_) {
       // The parent renders typed mutation feedback while this sheet resets.
     } finally {
@@ -161,6 +166,6 @@ class _DailyLogSheetState extends State<DailyLogSheet> {
       confirmLabel: 'Xóa',
     );
     if (!mounted) return;
-    if (confirmed) await widget.onDeleteNote();
+    if (confirmed && widget.onDeleteNote != null) await widget.onDeleteNote!();
   }
 }

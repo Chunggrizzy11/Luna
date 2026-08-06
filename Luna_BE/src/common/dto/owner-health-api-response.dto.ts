@@ -154,23 +154,6 @@ export class OwnerDashboardDto {
   dailyLog!: DailyLogDto;
 }
 
-export class PartnerCycleDto {
-  @ApiProperty({ type: Number, nullable: true, minimum: 1 })
-  currentCycleDay!: number | null;
-
-  @ApiProperty()
-  isPeriodActive!: boolean;
-
-  @ApiProperty({ type: Number, nullable: true })
-  daysUntilNextPeriod!: number | null;
-
-  @ApiProperty({ type: String, format: 'date', nullable: true })
-  predictedPeriodStart!: string | null;
-
-  @ApiProperty({ type: String, format: 'date', nullable: true })
-  predictedPeriodEnd!: string | null;
-}
-
 export class PartnerDashboardDto {
   @ApiProperty({ format: 'date', example: DATE_EXAMPLE })
   date!: string;
@@ -178,11 +161,11 @@ export class PartnerDashboardDto {
   @ApiProperty({ enum: ['paired', 'unpaired'] })
   relationship!: 'paired' | 'unpaired';
 
-  @ApiProperty({ type: () => PartnerCycleDto, nullable: true })
-  cycle!: PartnerCycleDto | null;
+  @ApiProperty({ type: () => CycleSummaryDto, nullable: true })
+  cycle!: CycleSummaryDto | null;
 
-  @ApiProperty({ type: Number, nullable: true, minimum: 0, maximum: 5 })
-  discomfortLevel!: number | null;
+  @ApiProperty({ type: () => DailyLogDto, nullable: true })
+  dailyLog!: DailyLogDto | null;
 }
 
 export class DashboardEnvelopeDto extends TimestampedEnvelopeDto {

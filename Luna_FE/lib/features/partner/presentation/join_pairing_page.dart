@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_spacing.dart';
 import '../data/partner_repository.dart';
 import '../domain/partner_models.dart';
+import 'partner_providers.dart';
 
 /// Partner-facing page: enter an 8-character pairing code to pair with owner.
-class JoinPairingPage extends StatefulWidget {
+class JoinPairingPage extends ConsumerStatefulWidget {
   const JoinPairingPage({super.key, required this.repository});
 
   final PartnerRepository repository;
 
   @override
-  State<JoinPairingPage> createState() => _JoinPairingPageState();
+  ConsumerState<JoinPairingPage> createState() => _JoinPairingPageState();
 }
 
-class _JoinPairingPageState extends State<JoinPairingPage> {
+class _JoinPairingPageState extends ConsumerState<JoinPairingPage> {
   final _codeController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
@@ -50,6 +52,10 @@ class _JoinPairingPageState extends State<JoinPairingPage> {
     try {
       final code = _codeController.text.trim().toUpperCase();
       final response = await widget.repository.join(code);
+      
+      // Invalidate the provider so the previous screen refreshes its status
+      ref.invalidate(pairingStatusProvider);
+      
       setState(() {
         _success = response;
         _loading = false;

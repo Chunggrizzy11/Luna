@@ -6,7 +6,7 @@ import '../../features/notification/presentation/notification_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/partner/data/partner_repository.dart';
 import '../../features/partner/presentation/join_pairing_page.dart';
-import '../../features/partner/presentation/partner_pending_page.dart';
+import '../../features/partner/presentation/partner_shell.dart';
 import '../../features/partner/presentation/pairing_page.dart';
 import '../../features/splash/presentation/bootstrap_error_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
@@ -74,7 +74,7 @@ class AppRouter {
   static Widget homeForIdentity(DeviceIdentity? identity) =>
       switch (identity?.role) {
         DeviceRole.owner => const OwnerShell(),
-        DeviceRole.partner || null => const PartnerPendingPage(),
+        DeviceRole.partner || null => const PartnerShell(),
       };
 
   static String? redirectPath({

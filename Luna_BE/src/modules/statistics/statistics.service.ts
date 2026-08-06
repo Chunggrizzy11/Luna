@@ -2,7 +2,9 @@ import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
-import { Device, DeviceRole } from '../device/schemas/device.schema';
+import { DeviceRole } from '../device/schemas/device.schema';
+import { DeviceService } from '../device/device.service';
+import { Device } from '../device/schemas/device.schema';
 import { Cycle } from '../cycle/schemas/cycle.schema';
 import { DailyLog } from '../health/schemas/daily-log.schema';
 
@@ -28,17 +30,16 @@ export class StatisticsService {
     @InjectModel(Cycle.name) private readonly cycleModel: Model<Cycle>,
     @InjectModel(DailyLog.name) private readonly dailyLogModel: Model<DailyLog>,
     @InjectModel(Device.name) private readonly deviceModel: Model<Device>,
+    private readonly deviceService: DeviceService,
   ) {}
 
   async getCycleStatistics(
     device: AuthenticatedDevice,
   ): Promise<CycleStatisticsResponse> {
-    if (device.role !== DeviceRole.OWNER) {
-      throw new ForbiddenException('Only owners can view cycle statistics.');
-    }
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
 
     const cycles = await this.cycleModel
-      .find({ ownerDeviceId: device.deviceId })
+      .find({ ownerDeviceId })
       .sort({ startDate: 1 })
       .lean()
       .exec();
@@ -73,7 +74,8 @@ export class StatisticsService {
     from?: string,
     to?: string,
   ): Promise<MoodStatisticsResponse> {
-    const filter: any = { ownerDeviceId: device.deviceId };
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
+    const filter: any = { ownerDeviceId };
     if (from || to) {
       filter.date = {};
       if (from) filter.date.$gte = from;

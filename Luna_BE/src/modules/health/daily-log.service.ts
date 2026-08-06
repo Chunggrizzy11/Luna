@@ -7,6 +7,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import type { Model } from 'mongoose';
 import type { AuthenticatedDevice } from '../../common/interfaces/authenticated-device.interface';
 import { DeviceRole } from '../device/schemas/device.schema';
+import { DeviceService } from '../device/device.service';
 import { DailyLog, Mood, Symptom } from './schemas/daily-log.schema';
 
 const DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
@@ -25,16 +26,17 @@ export class DailyLogService {
   constructor(
     @InjectModel(DailyLog.name)
     private readonly dailyLogModel: Model<DailyLog>,
+    private readonly deviceService: DeviceService,
   ) {}
 
   async findByDate(
-    owner: AuthenticatedDevice,
+    device: AuthenticatedDevice,
     date: string,
   ): Promise<DailyLogRecord | null> {
-    this.requireOwner(owner);
+    const ownerDeviceId = await this.deviceService.resolveOwnerId(device);
     const normalizedDate = this.assertDateOnly(date);
     return this.dailyLogModel
-      .findOne({ ownerDeviceId: owner.deviceId, date: normalizedDate })
+      .findOne({ ownerDeviceId, date: normalizedDate })
       .lean()
       .exec();
   }
