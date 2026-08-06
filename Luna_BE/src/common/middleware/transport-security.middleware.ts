@@ -26,8 +26,15 @@ function hasTrustedProxyTls(
   request: Request,
   trustedProxy: TrustedProxy | undefined,
 ): boolean {
+  // When trustedProxy is undefined but Express "trust proxy" is set to true
+  // (trust-all mode on managed platforms like Render), request.secure already
+  // accounts for X-Forwarded-Proto, so we can rely on it directly.
+  if (!trustedProxy) {
+    return request.secure === true;
+  }
+
   const remoteAddress = request.socket.remoteAddress;
-  if (!trustedProxy || !remoteAddress || !trustedProxy(remoteAddress, 0)) {
+  if (!remoteAddress || !trustedProxy(remoteAddress, 0)) {
     return false;
   }
 
