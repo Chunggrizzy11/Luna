@@ -62,20 +62,9 @@ export class PairingService {
       throw new ConflictException('You are already paired with a partner.');
     }
 
-    // Invalidate any existing active codes for this owner
-    await this.pairingCodeModel.updateMany(
-      { ownerDeviceId: owner.deviceId, used: false, expiresAt: { $gt: new Date() } },
-      { $set: { used: true } },
-    );
-
-    const code = this.generateRandomCode();
+    // Hardcode for private app
+    const code = 'LUNALOVE';
     const expiresAt = new Date(Date.now() + CODE_EXPIRY_MINUTES * 60 * 1000);
-
-    await this.pairingCodeModel.create({
-      code,
-      ownerDeviceId: owner.deviceId,
-      expiresAt,
-    });
 
     return { code, expiresAt: expiresAt.toISOString() };
   }
@@ -92,38 +81,17 @@ export class PairingService {
     }
 
     const normalizedCode = code.toUpperCase().trim();
-    if (normalizedCode.length !== CODE_LENGTH) {
-      throw new BadRequestException('Pairing code must be 8 characters.');
+    if (normalizedCode !== 'LUNALOVE') {
+      throw new BadRequestException('Mã không hợp lệ. Vui lòng nhập LUNALOVE');
     }
 
-    const pairingCode = await this.pairingCodeModel.findOne({ code: normalizedCode });
-    if (!pairingCode) {
-      throw new NotFoundException('Invalid pairing code.');
-    }
-
-    // Check expiry
-    if (pairingCode.expiresAt < new Date()) {
-      throw new BadRequestException('Pairing code has expired.');
-    }
-
-    // Check attempts
-    if (pairingCode.attempts >= MAX_ATTEMPTS) {
-      throw new UnauthorizedException('Pairing code has reached maximum attempts.');
-    }
-
-    // Check if already used
-    if (pairingCode.used) {
-      throw new BadRequestException('Pairing code has already been used.');
-    }
-
-    // Check owner is still active
+    // Check owner is still active (Find the only owner in this private app)
     const owner = await this.deviceModel.findOne({
-      _id: pairingCode.ownerDeviceId,
       role: DeviceRole.OWNER,
       status: DeviceStatus.ACTIVE,
     });
     if (!owner) {
-      throw new NotFoundException('Owner device is no longer active.');
+      throw new NotFoundException('Owner device is no longer active or not found.');
     }
 
     // Check if partner is already paired
@@ -145,29 +113,11 @@ export class PairingService {
       throw new ConflictException('Owner is already paired with a partner.');
     }
 
-    // Increment attempts atomically and check
-    const updatedCode = await this.pairingCodeModel.findOneAndUpdate(
-      {
-        _id: pairingCode._id,
-        attempts: { $lt: MAX_ATTEMPTS },
-        used: false,
-      },
-      { $inc: { attempts: 1 } },
-      { new: true },
-    );
-
-    if (!updatedCode) {
-      throw new UnauthorizedException('Pairing code has reached maximum attempts.');
-    }
-
     // Link partner to owner
     await this.deviceModel.findByIdAndUpdate(partner.deviceId, {
       pairedOwnerDeviceId: String(owner._id),
       pairId: owner.pairId,
     });
-
-    // Mark code as used
-    await this.pairingCodeModel.findByIdAndUpdate(pairingCode._id, { used: true });
 
     return { paired: true, ownerDeviceId: String(owner._id) };
   }
