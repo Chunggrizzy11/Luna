@@ -19,9 +19,29 @@ class PartnerPendingPage extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            ref.read(appIdentityStateProvider).revokeIdentity();
+          icon: const Icon(Icons.logout),
+          tooltip: 'Đăng xuất',
+          onPressed: () async {
+            final confirm = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Đăng xuất'),
+                content: const Text('Bạn có chắc chắn muốn thoát và tạo tài khoản mới không?'),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Hủy'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Đăng xuất'),
+                  ),
+                ],
+              ),
+            );
+            if (confirm == true) {
+              ref.read(appIdentityStateProvider).revokeIdentity();
+            }
           },
         ),
         title: const Text('Luna đồng hành'),

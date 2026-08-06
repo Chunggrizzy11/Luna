@@ -112,7 +112,17 @@ export class PairingService {
       status: DeviceStatus.ACTIVE,
     });
     if (ownerPartnerCount >= 1) {
-      throw new ConflictException('Owner is already paired with a partner.');
+      // Overwrite the existing partner since this is a private app and they probably lost their session
+      await this.deviceModel.updateMany(
+        {
+          pairedOwnerDeviceId: String(owner._id),
+          role: DeviceRole.PARTNER,
+          status: DeviceStatus.ACTIVE,
+        },
+        {
+          $unset: { pairedOwnerDeviceId: '', pairId: '' },
+        },
+      );
     }
 
     // Link partner to owner
