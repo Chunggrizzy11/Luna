@@ -15,7 +15,10 @@ import '../../health/presentation/health_providers.dart';
 import '../../home/presentation/home_page.dart';
 import '../../notification/presentation/notification_page.dart';
 import '../../notification/presentation/notification_providers.dart';
+import '../../../core/network/network_providers.dart';
 import 'partner_providers.dart';
+import '../../sos/sos_provider.dart';
+import '../../sos/sos_alert_overlay.dart';
 import 'partner_pending_page.dart';
 
 class PartnerShell extends ConsumerStatefulWidget {
@@ -26,6 +29,19 @@ class PartnerShell extends ConsumerStatefulWidget {
 
 class _PartnerShellState extends ConsumerState<PartnerShell> {
   int _index = 0;
+  bool _isListeningSocket = false;
+
+  void _listenSos() {
+    if (_isListeningSocket) return;
+    _isListeningSocket = true;
+    
+    final socketService = ref.read(socketServiceProvider);
+    socketService.onSosAlert.listen((_) {
+      if (mounted) {
+        SosAlertOverlay.show(context, ref);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,6 +58,8 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         if (!status.isPaired) {
           return const PartnerPendingPage();
         }
+
+        _listenSos();
 
         final unreadCount = ref.watch(unreadCountProvider);
         void goHome() => setState(() => _index = 0);

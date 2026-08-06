@@ -22,6 +22,7 @@ import { HealthModule } from './modules/health/health.module';
 import { MoodModule } from './modules/mood/mood.module';
 import { NoteModule } from './modules/note/note.module';
 import { SymptomModule } from './modules/symptom/symptom.module';
+import { SosModule } from './modules/sos/sos.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SymptomModule } from './modules/symptom/symptom.module';
     MoodModule,
     SymptomModule,
     NoteModule,
+    SosModule,
   ],
   controllers: [AppController],
   providers: [

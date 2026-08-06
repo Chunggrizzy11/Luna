@@ -13,6 +13,8 @@ import '../../../core/widgets/app_error.dart';
 import '../../../core/widgets/app_loading.dart';
 import '../../health/domain/health_models.dart';
 import '../../health/presentation/health_providers.dart';
+import '../../../core/network/network_providers.dart';
+import '../../sos/sos_provider.dart';
 
 class HomePage extends ConsumerWidget {
   const HomePage({this.onOpenDailyLog, this.onOpenCycle, this.isPartner = false, super.key});
@@ -123,14 +125,82 @@ class HomePage extends ConsumerWidget {
       ),
       floatingActionButton: isPartner
           ? null
-          : AppButton(
-              fullWidth: false,
-              size: ButtonSize.large,
-              onPressed: onOpenDailyLog,
-              icon: Icons.edit_note,
-              label: 'Ghi hôm nay',
-              variant: ButtonVariant.brand,
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                _SosButton(),
+                const SizedBox(height: AppSpacing.md),
+                AppButton(
+                  fullWidth: false,
+                  size: ButtonSize.large,
+                  onPressed: onOpenDailyLog,
+                  icon: Icons.edit_note,
+                  label: 'Ghi hôm nay',
+                  variant: ButtonVariant.brand,
+                ),
+              ],
             ),
+    );
+  }
+}
+
+class _SosButton extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_SosButton> createState() => _SosButtonState();
+}
+
+class _SosButtonState extends ConsumerState<_SosButton> {
+  var _isListeningSocket = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_isListeningSocket) {
+      _isListeningSocket = true;
+      ref.read(socketServiceProvider).onSosAcknowledged.listen((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Người yêu đã nhận được tín hiệu khẩn cấp! 💙'),
+              backgroundColor: Colors.blue,
+              duration: Duration(seconds: 5),
+            ),
+          );
+        }
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final sosState = ref.watch(sosProvider);
+    
+    return FloatingActionButton.extended(
+      heroTag: 'sos_btn',
+      backgroundColor: sosState.canTrigger ? Colors.red : Colors.grey,
+      foregroundColor: Colors.white,
+      onPressed: sosState.canTrigger 
+          ? () async {
+              final success = await ref.read(sosProvider.notifier).trigger();
+              if (success && mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Đã gửi tín hiệu khẩn cấp! 💙'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            } 
+          : null,
+      icon: sosState.isSending 
+          ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+          : const Icon(Icons.sos),
+      label: Text(
+        sosState.cooldownSeconds > 0 
+            ? 'Chờ ${sosState.cooldownSeconds}s' 
+            : 'Khẩn cấp',
+      ),
     );
   }
 }

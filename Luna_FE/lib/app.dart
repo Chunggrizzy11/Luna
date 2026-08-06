@@ -8,6 +8,7 @@ import 'core/config/app_identity_state.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_color.dart';
 import 'core/theme/app_theme.dart';
+import 'core/network/network_providers.dart';
 import 'features/health/presentation/health_providers.dart';
 
 class LunaApp extends StatelessWidget {
@@ -22,6 +23,7 @@ class LunaApp extends StatelessWidget {
     overrides: [
       apiClientProvider.overrideWithValue(config.apiClient),
       appIdentityStateProvider.overrideWithValue(config.identityState),
+      socketServiceProvider.overrideWithValue(config.socketService),
     ],
     child: MaterialApp.router(
       title: AppConstant.appName,

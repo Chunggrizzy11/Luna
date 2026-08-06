@@ -7,6 +7,7 @@ export enum NotificationType {
   JOURNAL_PROMPT = 'journal_prompt',
   PAIRING_UPDATE = 'pairing_update',
   GENERAL = 'general',
+  SOS = 'sos',
 }
 
 @Schema({ timestamps: true })

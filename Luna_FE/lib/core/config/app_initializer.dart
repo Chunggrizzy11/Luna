@@ -3,6 +3,7 @@ import '../../features/onboarding/domain/register_device.dart';
 import '../../features/onboarding/presentation/onboarding_controller.dart';
 import '../network/api_client.dart';
 import '../network/dio_client.dart';
+import '../network/socket_service.dart';
 import '../storage/secure_storage_service.dart';
 import 'app_config.dart';
 import 'app_identity_state.dart';
@@ -30,6 +31,9 @@ abstract final class AppInitializer {
       registerDevice: registerDevice,
       secureStorage: storage,
     );
+    final socketService = SocketService(() async => identityState.identity?.token);
+    socketService.connect();
+
     return AppConfig(
       secureStorage: storage,
       dioClient: dioClient,
@@ -37,6 +41,7 @@ abstract final class AppInitializer {
       registerDevice: registerDevice,
       onboardingController: controller,
       identityState: identityState,
+      socketService: socketService,
     );
   }
 }
