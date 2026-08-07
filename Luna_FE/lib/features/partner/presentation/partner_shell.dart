@@ -60,13 +60,14 @@ class _PartnerShellState extends ConsumerState<PartnerShell> {
         ),
       ),
       data: (status) {
+        // TEMPORARY FOR TESTING: Luôn bật socket lắng nghe SOS (kể cả khi chưa Pairing)
+        _listenSos();
+
         if (!status.isPaired) {
           return _PartnerWaitingScreen(
             onRetry: () => ref.invalidate(pairingStatusProvider),
           );
         }
-
-        _listenSos();
 
         final unreadCount = ref.watch(unreadCountProvider);
         void goHome() => setState(() => _index = 0);
