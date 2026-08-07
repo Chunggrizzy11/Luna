@@ -18,19 +18,18 @@ export class SosService {
   ) {}
 
   async trigger(device: AuthenticatedDevice): Promise<void> {
-    if (device.role !== DeviceRole.OWNER) {
-      throw new ForbiddenException('Only the owner can trigger SOS.');
-    }
+    // TEMPORARY FOR TESTING: Bỏ check role
+    // if (device.role !== DeviceRole.OWNER) {
+    //   throw new ForbiddenException('Only the owner can trigger SOS.');
+    // }
 
-    // Find partner device
+    // TEMPORARY FOR TESTING: Tìm bất kỳ thiết bị nào khác làm Partner
     const partner = await this.deviceModel.findOne({
-      pairedOwnerDeviceId: device.deviceId,
-      role: DeviceRole.PARTNER,
-      status: DeviceStatus.ACTIVE,
+      _id: { $ne: device.deviceId },
     });
 
     if (!partner) {
-      throw new NotFoundException('Partner device not found.');
+      throw new NotFoundException('Không tìm thấy thiết bị nào khác trong DB để test.');
     }
 
     const partnerId = String(partner._id);
@@ -57,18 +56,22 @@ export class SosService {
   }
 
   async acknowledge(device: AuthenticatedDevice): Promise<void> {
-    if (device.role !== DeviceRole.PARTNER) {
-      throw new ForbiddenException('Only the partner can acknowledge SOS.');
-    }
+    // TEMPORARY FOR TESTING: Bỏ check role
+    // if (device.role !== DeviceRole.PARTNER) {
+    //   throw new ForbiddenException('Only the partner can acknowledge SOS.');
+    // }
 
-    // Find owner device
-    const partner = await this.deviceModel.findById(device.deviceId);
-    if (!partner || !partner.pairedOwnerDeviceId) {
-      throw new NotFoundException('Not paired with an owner.');
+    // TEMPORARY FOR TESTING: Tìm bất kỳ thiết bị nào khác làm Owner
+    const owner = await this.deviceModel.findOne({
+      _id: { $ne: device.deviceId },
+    });
+
+    if (!owner) {
+      throw new NotFoundException('Không tìm thấy Owner.');
     }
 
     // Emit acknowledgment to owner
-    this.notificationGateway.emitToDevice(partner.pairedOwnerDeviceId, 'sos-acknowledged', {
+    this.notificationGateway.emitToDevice(String(owner._id), 'sos-acknowledged', {
       timestamp: new Date().toISOString(),
     });
   }
