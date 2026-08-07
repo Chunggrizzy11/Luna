@@ -32,9 +32,9 @@ class NotificationRepository {
   }
 
   Map<String, dynamic> _map(Object? value) {
-    if (value is! Map<String, dynamic>) {
-      throw const FormatException('Invalid notification response');
+    if (value is Map) {
+      return Map<String, dynamic>.from(value);
     }
-    return value;
+    throw FormatException('Invalid notification response. Type was ${value.runtimeType}, value: $value');
   }
 }

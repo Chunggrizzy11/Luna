@@ -5,7 +5,8 @@ enum NotificationType {
   careSuggestion('Gợi ý chăm sóc'),
   journalPrompt('Nhắc nhở nhật ký'),
   pairingUpdate('Cập nhật ghép đôi'),
-  general('Thông báo chung');
+  general('Thông báo chung'),
+  sos('Tín hiệu khẩn cấp');
 
   const NotificationType(this.title);
   final String title;
@@ -33,8 +34,10 @@ class Notification extends Equatable {
   factory Notification.fromJson(Map<String, dynamic> json) {
     return Notification(
       id: json['id'] as String,
-      type: NotificationType.values
-          .firstWhere((e) => e.name == json['type']),
+      type: NotificationType.values.firstWhere(
+        (e) => e.name.toLowerCase() == json['type']?.toString().toLowerCase(),
+        orElse: () => NotificationType.general,
+      ),
       title: json['title'] as String,
       body: json['body'] as String,
       data: (json['data'] as Map<String, dynamic>?)?.map(
