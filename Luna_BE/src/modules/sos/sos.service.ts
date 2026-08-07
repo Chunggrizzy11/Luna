@@ -18,25 +18,26 @@ export class SosService {
   ) {}
 
   async trigger(device: AuthenticatedDevice): Promise<void> {
-    // TEMPORARY FOR TESTING: Bỏ check role
-    // if (device.role !== DeviceRole.OWNER) {
-    //   throw new ForbiddenException('Only the owner can trigger SOS.');
-    // }
+    let recipientId: string | null = null;
 
-    // TEMPORARY FOR TESTING: Tìm bất kỳ thiết bị nào khác làm Partner
-    const partner = await this.deviceModel.findOne({
-      _id: { $ne: device.deviceId },
-    });
-
-    if (!partner) {
-      throw new NotFoundException('Không tìm thấy thiết bị nào khác trong DB để test.');
+    if (device.role === DeviceRole.OWNER) {
+      const partner = await this.deviceModel.findOne({
+        pairedOwnerDeviceId: device.deviceId,
+        role: DeviceRole.PARTNER,
+      });
+      recipientId = partner ? String(partner._id) : null;
+    } else {
+      const partnerDoc = await this.deviceModel.findById(device.deviceId);
+      recipientId = partnerDoc?.pairedOwnerDeviceId || null;
     }
 
-    const partnerId = String(partner._id);
+    if (!recipientId) {
+      throw new NotFoundException('Không tìm thấy thiết bị đã ghép đôi.');
+    }
 
     // Save notification to DB
     await this.notificationService.create({
-      recipientDeviceId: partnerId,
+      recipientDeviceId: recipientId,
       type: NotificationType.SOS,
       title: '🆘 Tín hiệu khẩn cấp',
       body: 'Bạn gái đang cần bạn! Hãy liên hệ ngay.',
@@ -44,34 +45,37 @@ export class SosService {
 
     // Send push notification
     await this.pushNotificationService.sendToDevice(
-      partnerId,
+      recipientId,
       '🆘 Tín hiệu khẩn cấp',
       'Bạn gái đang cần bạn! Hãy liên hệ ngay.',
     );
 
     // Emit realtime socket event
-    this.notificationGateway.emitToDevice(partnerId, 'sos-alert', {
+    this.notificationGateway.emitToDevice(recipientId, 'sos-alert', {
       timestamp: new Date().toISOString(),
     });
   }
 
   async acknowledge(device: AuthenticatedDevice): Promise<void> {
-    // TEMPORARY FOR TESTING: Bỏ check role
-    // if (device.role !== DeviceRole.PARTNER) {
-    //   throw new ForbiddenException('Only the partner can acknowledge SOS.');
-    // }
+    let recipientId: string | null = null;
 
-    // TEMPORARY FOR TESTING: Tìm bất kỳ thiết bị nào khác làm Owner
-    const owner = await this.deviceModel.findOne({
-      _id: { $ne: device.deviceId },
-    });
-
-    if (!owner) {
-      throw new NotFoundException('Không tìm thấy Owner.');
+    if (device.role === DeviceRole.PARTNER) {
+      const partnerDoc = await this.deviceModel.findById(device.deviceId);
+      recipientId = partnerDoc?.pairedOwnerDeviceId || null;
+    } else {
+      const partner = await this.deviceModel.findOne({
+        pairedOwnerDeviceId: device.deviceId,
+        role: DeviceRole.PARTNER,
+      });
+      recipientId = partner ? String(partner._id) : null;
     }
 
-    // Emit acknowledgment to owner
-    this.notificationGateway.emitToDevice(String(owner._id), 'sos-acknowledged', {
+    if (!recipientId) {
+      throw new NotFoundException('Không tìm thấy thiết bị đã ghép đôi.');
+    }
+
+    // Emit acknowledgment to recipient
+    this.notificationGateway.emitToDevice(recipientId, 'sos-acknowledged', {
       timestamp: new Date().toISOString(),
     });
   }
