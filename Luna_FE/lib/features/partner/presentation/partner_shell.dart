@@ -32,6 +32,23 @@ class PartnerShell extends ConsumerStatefulWidget {
 class _PartnerShellState extends ConsumerState<PartnerShell> {
   int _index = 0;
   bool _isListeningSocket = false;
+  Timer? _refreshTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        ref.invalidate(pairingStatusProvider);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
 
   void _listenSos() {
     if (_isListeningSocket) return;
