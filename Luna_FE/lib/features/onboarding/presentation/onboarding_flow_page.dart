@@ -251,8 +251,8 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
               if (!kIsWeb && Platform.environment.containsKey('FLUTTER_TEST'))
                  const SizedBox(height: 40)
               else
-                SvgPicture.network(
-                  'https://skillicons.dev/icons?i=flutter,nodejs,nestjs,mongodb${isDark ? "&theme=dark" : "&theme=light"}',
+                SvgPicture.asset(
+                  isDark ? 'assets/svg/tech_stack_dark.svg' : 'assets/svg/tech_stack_light.svg',
                   height: 40,
                   placeholderBuilder: (context) => const SizedBox(height: 40),
                 ),
